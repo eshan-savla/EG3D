@@ -4,6 +4,7 @@
 
 #ifndef EG3D_RAWCLOUD_H
 #define EG3D_RAWCLOUD_H
+#pragma once
 
 #include <pcl/io/pcd_io.h>
 #include <pcl/io/io.h>
@@ -27,21 +28,27 @@ private:
     bool is_filtered;
 
     void ReadCloud(const std::string &file_path);
-    void ComputeInliers(const float &dist_thresh, std::vector<int> &neighbours, std::vector<int> &inliers,
-                        pcl::PointCloud<pcl::PointXYZ>::Ptr refined_cloud);
+    void ComputeInliers(const float &dist_thresh, std::vector<int> &neighbours, std::vector<int> &local_inliers,
+                        pcl::PointCloud<pcl::PointXYZ>::Ptr &refined_cloud, std::vector<int> &global_inliers);
     void ExtractIndices(const std::vector<int> &indices, pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud);
     static std::tuple<Eigen::Vector4f, float> EstimateNormals(pcl::PointCloud<pcl::PointXYZ>::Ptr &input_cloud,
                                                        const std::vector<int> &indices);
-
+    static double ComputeAngularGap(const pcl::PointXYZ &origin, pcl::PointCloud<pcl::PointXYZ>::Ptr &local_cloud,
+                                  Eigen::Vector4f &plane_parameters);
+    static void CreateVector(const pcl::PointXYZ &pt1, const pcl::PointXYZ &pt2, Eigen::Vector3f &vec);
+    static bool InInliers(pcl::index_t &origin, std::vector<int> &global_inliers);
 public:
     RawCloud(const std::string &file_path);
+    RawCloud(const bool gen_cloud, const int pcl_size);
     unsigned int GetCount();
+    pcl::PointCloud<pcl::PointXYZ>::Ptr GetCloud();
     unsigned int StatOutlierRemoval(const int MeanK, const float StddevMulThresh);
     unsigned int StatOutlierRemoval(const int MeanK, const float StddevMulThresh, std::string &out_path);
     unsigned int RadOutlierRemoval(const float Radius, const int MinNeighbours);
     unsigned int RadOutlierRemoval(const float Radius, const int MinNeighbours, std::string &out_path);
-    void FindEdgePoints(const int no_neighbours, double angular_thresh, const float dist_thresh = 0.01,
-                        const float radius = 1.0, bool radial_search = false);
+    void FindEdgePoints(const int no_neighbours, const double angular_thresh_rads,
+                        std::vector<pcl::index_t> &edge_points, const float dist_thresh = 0.01,
+                        const float radius = 0.1, const bool radial_search = false);
 
 
 };
