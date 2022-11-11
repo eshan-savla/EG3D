@@ -18,6 +18,7 @@
 #include <pcl/sample_consensus/sac_model_plane.h>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/filters/extract_indices.h>
+#include <pcl/filters/voxel_grid.h>
 #include <pcl/features/normal_3d_omp.h>
 #include <string>
 
@@ -48,8 +49,9 @@ public:
     unsigned int RadOutlierRemoval(const float Radius, const int MinNeighbours);
     unsigned int RadOutlierRemoval(const float Radius, const int MinNeighbours, std::string &out_path);
     void FindEdgePoints(const int no_neighbours, const double angular_thresh_rads,
-                        std::vector<int> &edge_points, const float dist_thresh = 0.01,
+                        std::vector<int> &edge_points_global, const float dist_thresh = 0.01,
                         const float radius = 0.1, const bool radial_search = false);
+    void VoxelDownSample(const float &leaf_size);
 
 
 };
