@@ -3,7 +3,7 @@ project(EG3D)
 
 set(CMAKE_CXX_STANDARD 14)
 
-find_package(PCL 1.7 REQUIRED COMPONENTS segmentation sample_consensus kdtree visualization filters common io)
+find_package(PCL 1.7 REQUIRED)
 include_directories("${PCL_INCLUDE_DIRS}" "${PROJECT_SOURCE_DIR}/include")
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
