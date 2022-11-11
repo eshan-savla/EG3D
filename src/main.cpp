@@ -9,10 +9,10 @@
 
 
 int main(int argc, const char * argv[]) {
-    RawCloud raw_input("../data/Blech.pcd");
+    RawCloud raw_input("../data/table_scene_lms400.pcd");
 //    RawCloud raw_input(true, 1000);
     pcl::PointCloud<pcl::PointXYZ> cl = *raw_input.GetCloud();
-    std::vector<pcl::index_t> edge_points;
+    std::vector<int> edge_points;
     pcl::StopWatch stpw;
     std::cout << "Beginning edge point search" << std::endl;
     stpw.reset();

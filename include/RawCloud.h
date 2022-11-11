@@ -8,6 +8,7 @@
 
 #include <pcl/io/pcd_io.h>
 #include <pcl/io/io.h>
+#include <pcl/pcl_macros.h>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl/filters/statistical_outlier_removal.h>
@@ -36,7 +37,7 @@ private:
     static double ComputeAngularGap(const pcl::PointXYZ &origin, pcl::PointCloud<pcl::PointXYZ>::Ptr &local_cloud,
                                   Eigen::Vector4f &plane_parameters);
     static void CreateVector(const pcl::PointXYZ &pt1, const pcl::PointXYZ &pt2, Eigen::Vector3f &vec);
-    static bool InInliers(pcl::index_t &origin, std::vector<int> &global_inliers);
+    static bool InInliers(int &origin, std::vector<int> &global_inliers);
 public:
     RawCloud(const std::string &file_path);
     RawCloud(const bool gen_cloud, const int pcl_size);
@@ -47,7 +48,7 @@ public:
     unsigned int RadOutlierRemoval(const float Radius, const int MinNeighbours);
     unsigned int RadOutlierRemoval(const float Radius, const int MinNeighbours, std::string &out_path);
     void FindEdgePoints(const int no_neighbours, const double angular_thresh_rads,
-                        std::vector<pcl::index_t> &edge_points, const float dist_thresh = 0.01,
+                        std::vector<int> &edge_points, const float dist_thresh = 0.01,
                         const float radius = 0.1, const bool radial_search = false);
 
 

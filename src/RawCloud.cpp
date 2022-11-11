@@ -21,7 +21,7 @@ RawCloud::RawCloud(const bool gen_cloud, const int pcl_size) : raw_cloud(new pcl
     raw_cloud->height   = 1;
     raw_cloud->is_dense = false;
     raw_cloud->points.resize (raw_cloud->width * raw_cloud->height);
-    for (pcl::index_t i = 0; i < static_cast<pcl::index_t>(raw_cloud->size ()); ++i)
+    for (int i = 0; i < static_cast<int>(raw_cloud->size ()); ++i)
       {
         {
               (*raw_cloud)[i].x = 1024 * rand () / (RAND_MAX + 1.0);
@@ -87,13 +87,13 @@ unsigned int RawCloud::RadOutlierRemoval(const float Radius, const int MinNeighb
 }
 
 void RawCloud::FindEdgePoints(const int no_neighbours, const double angular_thresh_rads,
-                              std::vector<pcl::index_t> &edge_points, const float dist_thresh, const float radius,
+                              std::vector<int> &edge_points, const float dist_thresh, const float radius,
                               const bool radial_search) {
     const int K = no_neighbours;
     pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
     kdtree.setInputCloud(raw_cloud);
-    pcl::index_t last_i;
-    for (pcl::index_t i = 0; i < static_cast<pcl::index_t>(raw_cloud->size()); ++i) {
+    int last_i;
+    for (int i = 0; i < static_cast<int>(raw_cloud->size()); ++i) {
         std::vector<int> neighbour_ids(K);
         std::vector<float> neighbour_sqdist(K);
         const pcl::PointXYZ origin = raw_cloud->at(i);
@@ -212,7 +212,7 @@ void RawCloud::CreateVector(const pcl::PointXYZ &pt1, const pcl::PointXYZ &pt2, 
     vec = e_2_vector - e_1_vector;
 }
 
-bool RawCloud::InInliers(pcl::index_t &origin, std::vector<int> &global_inliers) {
+bool RawCloud::InInliers(int &origin, std::vector<int> &global_inliers) {
     if (global_inliers.empty()) return false;
     if (std::find(global_inliers.begin(), global_inliers.end(), origin) != global_inliers.end())
         return true;
