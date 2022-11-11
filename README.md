@@ -10,10 +10,11 @@ This library makes use of the [Point Cloud Library](https://pointclouds.org/) an
 
 ## Current Stand
 Currently, the library is capable of computing edge points of any point cloud object, albeit at a lower performance. 
-Performance increase should be seen after parallelising the programme.
+Drastic performance increase using parallelized for loops from OpenMP
 
 ## Future Implementations
 - Edge detection (smooth lines)
 - Recognition of 2D geometric profiles
 - 3D profile information
+- online edge detection
 - ROS Wrapper
