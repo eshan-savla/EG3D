@@ -21,6 +21,7 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/features/normal_3d_omp.h>
 #include <string>
+#include "EdgePoints.h"
 
 class RawCloud {
 private:
@@ -41,16 +42,16 @@ private:
     static bool InInliers(int &origin, std::vector<int> &global_inliers);
 public:
     RawCloud(const std::string &file_path);
-    RawCloud(const bool gen_cloud, const int pcl_size);
+    RawCloud(bool gen_cloud, int pcl_size);
     unsigned int GetCount();
     pcl::PointCloud<pcl::PointXYZ>::Ptr GetCloud();
-    unsigned int StatOutlierRemoval(const int MeanK, const float StddevMulThresh);
-    unsigned int StatOutlierRemoval(const int MeanK, const float StddevMulThresh, std::string &out_path);
-    unsigned int RadOutlierRemoval(const float Radius, const int MinNeighbours);
-    unsigned int RadOutlierRemoval(const float Radius, const int MinNeighbours, std::string &out_path);
-    void FindEdgePoints(const int no_neighbours, const double angular_thresh_rads,
-                        std::vector<int> &edge_points_global, const float dist_thresh = 0.01,
-                        const float radius = 0.1, const bool radial_search = false);
+    unsigned int StatOutlierRemoval(int MeanK, float StddevMulThresh);
+    unsigned int StatOutlierRemoval(int MeanK, float StddevMulThresh, std::string &out_path);
+    unsigned int RadOutlierRemoval(float Radius, int MinNeighbours);
+    unsigned int RadOutlierRemoval(float Radius, int MinNeighbours, std::string &out_path);
+    EdgePoints FindEdgePoints(int no_neighbours, double angular_thresh_rads,
+                              std::vector<int> &edge_points_global, float dist_thresh = 0.01,
+                              float radius = 0.1, const bool radial_search = false);
     void VoxelDownSample(const float &leaf_size);
 
 

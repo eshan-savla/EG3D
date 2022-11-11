@@ -6,7 +6,7 @@
 #include <cmath>
 #include <vector>
 #include <random>
-#include <omp.h>
+#include "EdgePoints.h"
 
 
 RawCloud::RawCloud(const std::string &file_path) : raw_cloud(new pcl::PointCloud<pcl::PointXYZ>) {
@@ -93,9 +93,9 @@ unsigned int RawCloud::RadOutlierRemoval(const float Radius, const int MinNeighb
     return diff;
 }
 
-void RawCloud::FindEdgePoints(const int no_neighbours, const double angular_thresh_rads,
-                              std::vector<int> &edge_points_global, const float dist_thresh, const float radius,
-                              const bool radial_search) {
+EdgePoints RawCloud::FindEdgePoints(const int no_neighbours, const double angular_thresh_rads,
+                                    std::vector<int> &edge_points_global, const float dist_thresh, const float radius,
+                                    const bool radial_search) {
     const int K = no_neighbours;
     pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
     kdtree.setInputCloud(raw_cloud);
@@ -132,6 +132,7 @@ void RawCloud::FindEdgePoints(const int no_neighbours, const double angular_thre
 #pragma omp critical
     edge_points_global.insert(edge_points_global.end(), edge_points_thread.begin(), edge_points_thread.end());
     }
+    return EdgePoints(edge_points_global, raw_cloud);
 }
 
 
