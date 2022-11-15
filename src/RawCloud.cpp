@@ -50,6 +50,13 @@ unsigned int RawCloud::GetCount() {
 pcl::PointCloud<pcl::PointXYZ>::Ptr RawCloud::GetCloud() {
     return raw_cloud;
 }
+
+void RawCloud::VoxelDownSample(const float &leaf_size) {
+    pcl::VoxelGrid<pcl::PointXYZ> vg_sampler;
+    vg_sampler.setInputCloud(raw_cloud);
+    vg_sampler.setLeafSize(leaf_size, leaf_size, leaf_size);
+    vg_sampler.filter(*raw_cloud);
+}
 unsigned int RawCloud::StatOutlierRemoval(const int MeanK, const float StddevMulThresh) {
     if (count_before != GetCount()) count_before = GetCount();
     pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
@@ -87,41 +94,44 @@ unsigned int RawCloud::RadOutlierRemoval(const float Radius, const int MinNeighb
 }
 
 void RawCloud::FindEdgePoints(const int no_neighbours, const double angular_thresh_rads,
-                              std::vector<int> &edge_points, const float dist_thresh, const float radius,
+                              std::vector<int> &edge_points_global, const float dist_thresh, const float radius,
                               const bool radial_search) {
     const int K = no_neighbours;
     pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
     kdtree.setInputCloud(raw_cloud);
-    int last_i;
-    for (int i = 0; i < static_cast<int>(raw_cloud->size()); ++i) {
-        std::vector<int> neighbour_ids(K);
-        std::vector<float> neighbour_sqdist(K);
-        const pcl::PointXYZ origin = raw_cloud->at(i);
-        if (radial_search) {
-            if (kdtree.radiusSearch(origin, radius, neighbour_ids, neighbour_sqdist) < 3)
+#pragma omp parallel default(none) shared(angular_thresh_rads, edge_points_global, dist_thresh, radius, radial_search, kdtree, K)
+    {
+        std::vector<int> edge_points_thread;
+//#pragma omp parallel for shared(kdtree, K, edge_points_global, radius, dist_thresh, angular_thresh_rads) private(edge_points_thread, neighbour_ids, neighbour_sqdist, origin, local_inliers, global_inliers, neighbours_cloud, plane_parameters, G0)
+        #pragma omp for nowait
+        for (int i = 0; i < static_cast<int>(raw_cloud->size()); ++i) {
+            std::vector<int> neighbour_ids(K);
+            std::vector<float> neighbour_sqdist(K);
+            const pcl::PointXYZ origin = raw_cloud->at(i);
+            if (radial_search) {
+                if (kdtree.radiusSearch(origin, radius, neighbour_ids, neighbour_sqdist) < 3)
+                    continue;
+            } else {
+                if (kdtree.nearestKSearch(origin, K, neighbour_ids, neighbour_sqdist) < 3)
+                    continue;
+            }
+            std::vector<int> local_inliers, global_inliers;
+            pcl::PointCloud<pcl::PointXYZ>::Ptr neighbours_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+            ComputeInliers(dist_thresh, neighbour_ids, local_inliers, neighbours_cloud, global_inliers);
+            if (!InInliers(i, global_inliers) || local_inliers.size() < 3) {
                 continue;
-        } else {
-            if (kdtree.nearestKSearch(origin, K, neighbour_ids, neighbour_sqdist) < 3)
-                continue;
+            } else {
+                Eigen::Vector4f plane_parameters;
+                float curvature;
+                std::tie(plane_parameters, curvature) = EstimateNormals(neighbours_cloud, local_inliers);
+                double G0 = ComputeAngularGap(origin, neighbours_cloud, plane_parameters);
+                if (G0 >= angular_thresh_rads)
+                    edge_points_thread.push_back(i);
+            }
         }
-        std::vector<int> local_inliers, global_inliers;
-        pcl::PointCloud<pcl::PointXYZ>::Ptr neighbours_cloud(new pcl::PointCloud<pcl::PointXYZ>);
-        ComputeInliers(dist_thresh, neighbour_ids, local_inliers, neighbours_cloud, global_inliers);
-        if (!InInliers(i, global_inliers) || local_inliers.size() < 3) {
-            continue;
-        } else {
-            Eigen::Vector4f plane_parameters;
-            float curvature;
-            std::tie(plane_parameters, curvature) = EstimateNormals(neighbours_cloud, local_inliers);
-            double G0 = ComputeAngularGap(origin, neighbours_cloud, plane_parameters);
-            if (G0 >= angular_thresh_rads)
-                edge_points.push_back(i);
-        }
-        last_i = i;
-        //TODO: implement angular gap algorithm
+#pragma omp critical
+    edge_points_global.insert(edge_points_global.end(), edge_points_thread.begin(), edge_points_thread.end());
     }
-    std::cout << "Last point checked: " << last_i << std::endl;
-
 }
 
 
@@ -178,29 +188,32 @@ double RawCloud::ComputeAngularGap(const pcl::PointXYZ &origin, pcl::PointCloud<
     Eigen::Vector3f e_second_vector = second_point.getVector3fMap();
     Eigen::Vector3f normal = plane_parameters.head<3>();
     Eigen::Vector3f v = u.cross(normal);
-    double check1 = v.dot(u);
-    double check2 = u.dot(normal);
-    double check3 = v.dot(normal);
+    std::vector<double> thetas_global, deltas;
 
-    std::vector<double> thetas, deltas;
-
-    for (pcl::PointXYZ &point: *local_cloud) {
-        Eigen::Vector3f op;
-        CreateVector(origin, point, op);
-        double du = op.dot(u);
-        if (du == 0) continue;
-        double dv = op.dot(v);
-        double theta = std::atan2(du,dv);
-        if (theta < 0)
-            theta += 2 * M_PI;
-        int b = 0;
-        thetas.push_back(theta);
+#pragma omp parallel default(none) shared(origin, u, v, local_cloud, thetas_global)
+    {
+        std::vector<double> thetas_thread;
+#pragma omp for nowait
+        for (pcl::PointXYZ &point: *local_cloud) {
+            Eigen::Vector3f op;
+            CreateVector(origin, point, op);
+            double du = op.dot(u);
+            if (du == 0) continue;
+            double dv = op.dot(v);
+            double theta = std::atan2(du, dv);
+            if (theta < 0)
+                theta += 2 * M_PI;
+            int b = 0;
+            thetas_thread.push_back(theta);
+        }
+#pragma omg critical
+        thetas_global.insert(thetas_global.end(), thetas_thread.begin(), thetas_thread.end());
     }
-    if (thetas.size() <= 1) return 0;
+    if (thetas_global.size() <= 1) return 0;
     else {
-        std::sort(thetas.begin(), thetas.end());
-        for (int i = 0; i < thetas.size() - 1; ++i)
-            deltas.push_back(thetas.at(i + 1) - thetas.at(i));
+        std::sort(thetas_global.begin(), thetas_global.end());
+        for (int i = 0; i < thetas_global.size() - 1; ++i)
+            deltas.push_back(thetas_global.at(i + 1) - thetas_global.at(i));
 
         return *std::max_element(deltas.begin(), deltas.end());
     }

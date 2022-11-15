@@ -9,8 +9,10 @@
 
 
 int main(int argc, const char * argv[]) {
-    RawCloud raw_input("../data/table_scene_lms400.pcd");
+    RawCloud raw_input("../data/test_scan_1.pcd");
 //    RawCloud raw_input(true, 1000);
+    raw_input.VoxelDownSample(0.0001f);
+    std::cout << "Points after down sample: " << raw_input.GetCount() << std::endl;
     pcl::PointCloud<pcl::PointXYZ> cl = *raw_input.GetCloud();
     std::vector<int> edge_points;
     pcl::StopWatch stpw;
