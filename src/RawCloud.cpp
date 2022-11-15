@@ -138,9 +138,6 @@ void RawCloud::ComputeInliers(const float &dist_thresh, std::vector<int> &neighb
     for (int &elem : local_inliers) {
         global_inliers.push_back(neighbours[elem]);
     }
-    /*pcl::PointCloud<pcl::PointXYZ>::Ptr save_pcl (new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::copyPointCloud(*neighbour_cloud, local_inliers, *save_pcl);
-    pcl::io::savePCDFileASCII("../data/section_plane.pcd", *save_pcl);*/
 }
 
 std::tuple<Eigen::Vector4f, float> RawCloud::EstimateNormals(pcl::PointCloud<pcl::PointXYZ>::Ptr &input_cloud,
@@ -195,14 +192,5 @@ double RawCloud::ComputeAngularGap(const pcl::PointXYZ &origin, pcl::PointCloud<
 
         return *std::max_element(deltas.begin(), deltas.end());
     }
-}
-
-
-bool RawCloud::InInliers(int &origin, std::vector<int> &global_inliers) {
-    if (global_inliers.empty()) return false;
-    if (std::find(global_inliers.begin(), global_inliers.end(), origin) != global_inliers.end())
-        return true;
-    else
-        return false;
 }
 

@@ -31,7 +31,6 @@ private:
                                                        const std::vector<int> &indices);
     static double ComputeAngularGap(const pcl::PointXYZ &origin, pcl::PointCloud<pcl::PointXYZ>::Ptr &local_cloud,
                                   Eigen::Vector4f &plane_parameters);
-    static bool InInliers(int &origin, std::vector<int> &global_inliers);
 public:
     RawCloud();
     void GenerateCloud(const int &pcl_size);
