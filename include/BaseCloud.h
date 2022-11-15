@@ -21,6 +21,7 @@ protected:
     void ExtractIndices(const std::vector<int> &indices, pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud);
 
     static void CreateVector(const pcl::PointXYZ &pt1, const pcl::PointXYZ &pt2, Eigen::Vector3f &vec);
+    static bool InInliers(int &origin, std::vector<int> &global_inliers);
 
 
 public:
