@@ -3,6 +3,7 @@
 //
 
 #include <unordered_set>
+#include <unordered_map>
 #include "EdgeCloud.h"
 
 EdgeCloud::EdgeCloud() : edge_normals(new pcl::PointCloud<pcl::Normal>), tree(new pcl::search::KdTree<pcl::PointXYZ>) {
@@ -18,13 +19,19 @@ void EdgeCloud::LoadInCloud(const std::vector<int> &edge_indices, const pcl::Poi
     pcl::copyPointCloud(*parent_cloud, edge_indices, *cloud_data);
 }
 
-void EdgeCloud::SegmentEdges(const int &neighbours_K, const float &dist_thresh, const float &norm_thresh) {
+void EdgeCloud::SegmentEdges(const int &neighbours_K, const float &dist_thresh, const float &smooth_thresh) {
 
-    std::vector<std::vector<int>> local_neighbours;
-    std::vector<Eigen::VectorXf> point_directions;
-    ComputeDirections(neighbours_K, dist_thresh, local_neighbours, point_directions);
+    std::unordered_map<int,std::vector<int>> local_neighbours;
+    std::unordered_map<int,Eigen::VectorXf> point_directions;
+    ComputeInliers(neighbours_K, dist_thresh, local_neighbours, point_directions);
     std::cout << "Size of neighbours vector: " << local_neighbours.size() << "\nSize of directions vector: "
                                                                         << point_directions.size() << std::endl;
+
+    std::vector<int> segment = {0};
+    for (int index_p = 1; index_p < cloud_data->size(); ++index_p) {
+
+    }
+
     int b = 0;
 }
 
@@ -36,18 +43,18 @@ void EdgeCloud::EstimateNormals(const int neighbours_K) {
     normal_estimator.compute(*edge_normals);
 }
 
-void EdgeCloud::ComputeDirections(const int &neighbours_K, const float &dist_thresh,
-                                  std::vector<std::vector<int>> &local_neighbours,
-                                  std::vector<Eigen::VectorXf> &point_vectors) {
+void EdgeCloud::ComputeInliers(const int &neighbours_K, const float &dist_thresh,
+                               std::unordered_map<int, std::vector<int>> &local_neighbours,
+                               std::unordered_map<int, Eigen::VectorXf> &point_vectors) {
 
     pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
     kdtree.setInputCloud(cloud_data);
 
-//#pragma omp parallel default(none) shared(kdtree, neighbours_K, local_neighbours, dist_thresh, point_vectors)
-//    {
+#pragma omp parallel default(none) shared(kdtree, neighbours_K, local_neighbours, dist_thresh, point_vectors)
+    {
 //        std::vector<std::vector<int>> local_neighbours_thr;
 //        std::vector<Eigen::VectorXf> point_vectors_thr;
-//#pragma omp for nowait
+#pragma omp for nowait
         for (int point_index = 0; point_index < cloud_data->size(); ++point_index) {
             std::vector<int> neighbour_ids;
             std::vector<float> squared_distances;
@@ -55,7 +62,6 @@ void EdgeCloud::ComputeDirections(const int &neighbours_K, const float &dist_thr
             squared_distances.clear();
 //        pcl::PointXYZ origin = cloud_data->at(point_index);
             kdtree.nearestKSearch(point_index, neighbours_K, neighbour_ids, squared_distances);
-            local_neighbours.push_back(neighbour_ids);
             pcl::PointCloud<pcl::PointXYZ>::Ptr neighbours_cloud(new pcl::PointCloud<pcl::PointXYZ>);
             std::vector<int> local_inliers, global_inliers;
             bool point_in_inliers = false;
@@ -74,17 +80,22 @@ void EdgeCloud::ComputeDirections(const int &neighbours_K, const float &dist_thr
 
                 point_in_inliers = InInliers(point_index, global_inliers);
                 if (point_in_inliers) {
-                    std::vector<int> first_last = {global_inliers.front(), global_inliers.back()};
-                    Eigen::VectorXf direction_vector;
-                    model_l->computeModelCoefficients(first_last, direction_vector);
-                    point_vectors.push_back(direction_vector);
+                    if (global_inliers.size() > 1) {
+                        std::vector<int> first_last = {global_inliers.front(), global_inliers.back()};
+                        Eigen::VectorXf direction_vector;
+                        model_l->computeModelCoefficients(first_last, direction_vector);
+                        point_vectors[point_index] = direction_vector;
+                    }
+                    local_neighbours[point_index] = global_inliers;
                 }
                 else {
                     for (int i = int (local_inliers.size()) - 1; i >= 0; i--) {
-                        if (neighbour_ids.size() == 2)
-                            break;
                         int inlier = local_inliers[i];
                         neighbour_ids.erase(neighbour_ids.begin() + inlier);
+                    }
+                    if (neighbour_ids.size() <= 1) {
+                        point_in_inliers = true;
+                        local_neighbours[point_index] = global_inliers;
                     }
                 }
 
@@ -93,6 +104,7 @@ void EdgeCloud::ComputeDirections(const int &neighbours_K, const float &dist_thr
 //#pragma omp critical
 //        local_neighbours.insert(local_neighbours.end(), local_neighbours_thr.begin(), local_neighbours_thr.end());
 //        point_vectors.insert(point_vectors.end(), point_vectors_thr.begin(), point_vectors_thr.end());
-//    };
+    };
+    int b = 0;
 }
 

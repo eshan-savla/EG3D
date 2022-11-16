@@ -26,15 +26,15 @@ private:
     std::vector<std::vector<int>> clusters;
 
     void EstimateNormals(int neighbours_K);
-    void ComputeDirections(const int &neighbours_K, const float &dist_thresh,
-                           std::vector<std::vector<int>> &local_neighbours,
-                           std::vector<Eigen::VectorXf> &point_vectors);
+    void ComputeInliers(const int &neighbours_K, const float &dist_thresh,
+                        std::unordered_map<int, std::vector<int>> &local_neighbours,
+                        std::unordered_map<int, Eigen::VectorXf> &point_vectors);
 
 public:
     EdgeCloud();
     EdgeCloud(const std::vector<int> &edge_indices, const pcl::PointCloud<pcl::PointXYZ>::Ptr& parent_cloud);
     void LoadInCloud(const std::vector<int> &edge_indices, const pcl::PointCloud<pcl::PointXYZ>::Ptr & parent_cloud);
-    void SegmentEdges(const int &neighbours_K, const float &dist_thresh, const float &norm_thresh);
+    void SegmentEdges(const int &neighbours_K, const float &dist_thresh, const float &smooth_thresh);
 };
 
 
