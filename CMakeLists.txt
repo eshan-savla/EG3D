@@ -1,10 +1,10 @@
-cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 project(EG3D)
 
 set(CMAKE_CXX_STANDARD 14)
 find_package(OpenMP REQUIRED)
 find_package(PCL 1.7 REQUIRED)
-include_directories("${PCL_INCLUDE_DIRS}" "${PROJECT_SOURCE_DIR}/include")
+include_directories(include "${PCL_INCLUDE_DIRS}")
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 file(GLOB_RECURSE SRC_FILES src/*.cpp)
