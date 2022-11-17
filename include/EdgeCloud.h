@@ -15,6 +15,7 @@
 #include <pcl/sample_consensus/ransac.h>
 #include <pcl/sample_consensus/sac_model_line.h>
 #include <pcl/segmentation/sac_segmentation.h>
+#include <string>
 
 
 
@@ -23,18 +24,30 @@ private:
     std::vector<int> edge_points_indices;
     pcl::PointCloud<pcl::Normal>::Ptr edge_normals;
     pcl::search::Search<pcl::PointXYZ>::Ptr tree;
-    std::vector<std::vector<int>> clusters;
+    std::vector<pcl::PointIndices> clusters;
+    std::vector<unsigned int> num_pts_in_segment;
+    std::vector<int> point_labels;
+    float angle_thresh;
+    std::unordered_map<int, pcl::Indices> neighbours_map;
+    std::unordered_map<int, Eigen::Vector3f> vectors_map;
 
     void EstimateNormals(int neighbours_K);
-    void ComputeInliers(const int &neighbours_K, const float &dist_thresh,
-                        std::unordered_map<int, std::vector<int>> &local_neighbours,
-                        std::unordered_map<int, Eigen::VectorXf> &point_vectors);
+    void ComputeInliers(const int &neighbours_K, const float &dist_thresh);
+    void ApplyRegionGrowing(const int &neighbours_k, const bool &sort);
+    int GrowSegment(const int &initial_seed, const int &segment_id, const int &neighbours_k);
+    bool CheckPoint(const int &current_seed, const int &neighbour, bool &is_a_seed);
+    void AssembleRegions();
 
 public:
     EdgeCloud();
     EdgeCloud(const std::vector<int> &edge_indices, const pcl::PointCloud<pcl::PointXYZ>::Ptr& parent_cloud);
     void LoadInCloud(const std::vector<int> &edge_indices, const pcl::PointCloud<pcl::PointXYZ>::Ptr & parent_cloud);
-    void SegmentEdges(const int &neighbours_K, const float &dist_thresh, const float &smooth_thresh);
+    void SegmentEdges(const int &neighbours_K, const float &dist_thresh, const float &angle_thresh, const bool &sort);
+    void CreateColouredCloud(const std::string &path);
+};
+
+inline bool Compare(std::pair<unsigned long, int> i, std::pair<unsigned long, int> j) {
+    return (i.first > j.first);
 };
 
 
