@@ -29,6 +29,7 @@ public:
     void ReadCloud(const std::string &file_path);
     void SaveCloud(const std::string &file_path);
     unsigned int GetCount();
+    pcl::PointCloud<pcl::PointXYZ> GetCloud();
 };
 
 

@@ -48,3 +48,9 @@ bool BaseCloud::InInliers(int &origin, std::vector<int> &global_inliers) {
         return false;
 }
 
+pcl::PointCloud<pcl::PointXYZ> BaseCloud::GetCloud() {
+    pcl::PointCloud<pcl::PointXYZ>::Ptr out_cloud (new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::copyPointCloud(*cloud_data, *out_cloud);
+    return *out_cloud;
+}
+
