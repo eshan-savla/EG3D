@@ -41,7 +41,7 @@ public:
     unsigned int RadOutlierRemoval(float Radius, int MinNeighbours, std::string &out_path);
     EdgeCloud FindEdgePoints(int no_neighbours, double angular_thresh_rads,
                              std::vector<int> &edge_points_global, float dist_thresh = 0.01,
-                             float radius = 0.1, const bool radial_search = false);
+                             float radius = 0.1, bool radial_search = false);
     void VoxelDownSample(const float &leaf_size);
 
 
