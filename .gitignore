@@ -12,3 +12,7 @@
 /data/orignal.pcd
 /data/test_scan_1.pcd
 /data/segments.pcd
+/data/edge_points_blech.pcd
+/data/edge_points_table.pcd
+/data/segments_blech.pcd
+/data/segments_table.pcd
