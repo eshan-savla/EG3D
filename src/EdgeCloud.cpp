@@ -9,10 +9,12 @@
 
 
 EdgeCloud::EdgeCloud() : edge_normals(new pcl::PointCloud<pcl::Normal>), tree(new pcl::search::KdTree<pcl::PointXYZ>) {
+    this->is_appended = false;
 }
 
 EdgeCloud::EdgeCloud(const std::vector<int> &edge_indices, const pcl::PointCloud<pcl::PointXYZ>::Ptr &parent_cloud) :
 edge_normals(new pcl::PointCloud<pcl::Normal>), tree(new pcl::search::KdTree<pcl::PointXYZ>) {
+    this->is_appended = false;
     LoadInCloud(edge_indices, parent_cloud);
 }
 
@@ -21,10 +23,12 @@ void EdgeCloud::LoadInCloud(const std::vector<int> &edge_indices, const pcl::Poi
     pcl::copyPointCloud(*parent_cloud, edge_indices, *cloud_data);
 }
 
-void EdgeCloud::SegmentEdges(const int &neighbours_K, const float &dist_thresh, const float &angle_thresh,
-                             const bool &sort) {
+void
+EdgeCloud::SegmentEdges(const int &neighbours_K, const float &dist_thresh, const float &angle_thresh, const bool &sort,
+                        const bool &override_cont) {
 
     this->angle_thresh = angle_thresh;
+    this->override_cont = override_cont;
     ComputeInliers(neighbours_K, dist_thresh);
     ApplyRegionGrowing(neighbours_K, sort);
     AssembleRegions();
@@ -262,3 +266,8 @@ void EdgeCloud::CreateColouredCloud(const std::string &path) {
         PCL_WARN("Edge points have not been segmented! First do segmentation");
 }
 
+void EdgeCloud::AddPoints(const pcl::PointCloud<pcl::PointXYZ>::Ptr &new_points) {
+    unsigned int previous_ind = cloud_data->size() - 1;
+    *cloud_data += *new_points;
+    is_appended = true;
+}

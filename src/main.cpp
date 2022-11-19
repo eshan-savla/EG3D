@@ -29,7 +29,7 @@ int main(int argc, const char * argv[]) {
     EdgeCloud edges;
     edges.ReadCloud("../data/edge_points.pcd");
     stpw.reset();
-    edges.SegmentEdges(30, 0.01, 20.0 / 180.0 * M_PI, true);
+    edges.SegmentEdges(30, 0.01, 20.0 / 180.0 * M_PI, true, false);
     double duration = stpw.getTimeSeconds();
     std::cout << "Segmenting duration: " << duration << std::endl;
     edges.CreateColouredCloud("../data/segments.pcd");

@@ -28,6 +28,8 @@ private:
     std::vector<unsigned int> num_pts_in_segment;
     std::vector<int> point_labels;
     float angle_thresh;
+    bool is_appended;
+    bool override_cont;
     std::unordered_map<int, pcl::Indices> neighbours_map;
     std::unordered_map<int, Eigen::Vector3f> vectors_map;
 
@@ -42,8 +44,10 @@ public:
     EdgeCloud();
     EdgeCloud(const std::vector<int> &edge_indices, const pcl::PointCloud<pcl::PointXYZ>::Ptr& parent_cloud);
     void LoadInCloud(const std::vector<int> &edge_indices, const pcl::PointCloud<pcl::PointXYZ>::Ptr & parent_cloud);
-    void SegmentEdges(const int &neighbours_K, const float &dist_thresh, const float &angle_thresh, const bool &sort);
+    void SegmentEdges(const int &neighbours_K, const float &dist_thresh, const float &angle_thresh, const bool &sort,
+                      const bool &override_cont);
     void CreateColouredCloud(const std::string &path);
+    void AddPoints(const pcl::PointCloud<pcl::PointXYZ>::Ptr &new_points);
 };
 
 inline bool Compare(std::pair<unsigned long, int> i, std::pair<unsigned long, int> j) {
