@@ -43,12 +43,11 @@ void EdgeCloud::ComputeInliers(const int &neighbours_K, const float &dist_thresh
 
     pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
     kdtree.setInputCloud(cloud_data);
-
-//#pragma omp parallel default(none) shared(kdtree, neighbours_K, dist_thresh)
-//    {
-//        std::vector<std::vector<int>> local_neighbours_thr;
-//        std::vector<Eigen::VectorXf> point_vectors_thr;
-//#pragma omp for nowait
+#pragma omp parallel default(none) shared(neighbours_K, dist_thresh, neighbours_map, vectors_map, kdtree)
+    {
+        std::unordered_map<int, pcl::Indices> neighbours_map_thr;
+        std::unordered_map<int, Eigen::Vector3f> vectors_map_thr;
+#pragma omp for nowait
         for (int point_index = 0; point_index < cloud_data->size(); ++point_index) {
             std::vector<int> neighbour_ids;
             std::vector<float> squared_distances;
@@ -79,12 +78,11 @@ void EdgeCloud::ComputeInliers(const int &neighbours_K, const float &dist_thresh
                                                                  cloud_data->at(global_inliers.back())};
                         Eigen::Vector3f direction_vector;
                         CreateVector(first_last.front(), first_last.back(), direction_vector);
-                        vectors_map[point_index] = direction_vector;
-                        neighbours_map[point_index] = global_inliers;
+                        vectors_map_thr[point_index] = direction_vector;
+                        neighbours_map_thr[point_index] = global_inliers;
                     }
-                }
-                else {
-                    for (int i = int (local_inliers.size()) - 1; i >= 0; i--) {
+                } else {
+                    for (int i = int(local_inliers.size()) - 1; i >= 0; i--) {
 //                        if (neighbour_ids.size() == 2)
 //                            break;
                         int inlier = local_inliers[i];
@@ -92,19 +90,19 @@ void EdgeCloud::ComputeInliers(const int &neighbours_K, const float &dist_thresh
                     }
                     if (neighbour_ids.size() <= 1) {
                         point_in_inliers = true;
-                        neighbours_map[point_index] = global_inliers;
+                        neighbours_map_thr[point_index] = global_inliers;
                         Eigen::Vector3f zero_vec;
                         zero_vec.setZero();
-                        vectors_map[point_index] = zero_vec;
+                        vectors_map_thr[point_index] = zero_vec;
                     }
                 }
 
             }
         }
-//#pragma omp critical
-//        neighbours_map.insert(neighbours_map.end(), local_neighbours_thr.begin(), local_neighbours_thr.end());
-//        vectors_map.insert(vectors_map.end(), point_vectors_thr.begin(), point_vectors_thr.end());
-//    };
+#pragma omp critical
+        neighbours_map.insert(neighbours_map_thr.begin(), neighbours_map_thr.end());
+        vectors_map.insert(vectors_map_thr.begin(), vectors_map_thr.end());
+    }
     int b = 0;
 }
 
@@ -192,8 +190,10 @@ bool EdgeCloud::CheckPoint(const int &current_seed, const int &neighbour, bool &
     float vector_theta = (std::abs(nghbr_vec.dot(seed_vec)))/(seed_vec.norm() * nghbr_vec.norm());
     if(vector_theta < cos_thresh)
         return false;
-    else
+    else {
+        vectors_map.at(current_seed) = seed_vec + nghbr_vec;
         return true;
+    }
 
 }
 

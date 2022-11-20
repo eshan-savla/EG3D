@@ -11,9 +11,9 @@
 
 int main(int argc, const char * argv[]) {
 //    RawCloud raw_input;
-//    raw_input.ReadCloud("../data/Blech.pcd");
+//    raw_input.ReadCloud("../data/table_scene_lms400.pcd");
 ////    raw_input.GenerateCloud(1000);
-//    raw_input.VoxelDownSample(0.0001f);
+//    raw_input.VoxelDownSample(0.005f);
 //    raw_input.StatOutlierRemoval(50,1.0);
 //    std::cout << "Points after down sample: " << raw_input.GetCount() << std::endl;
 //    pcl::PointCloud<pcl::PointXYZ> cl = *raw_input.GetCloud();
@@ -25,7 +25,7 @@ int main(int argc, const char * argv[]) {
 //    double duration = stpw.getTimeSeconds();
 //    std::cout << "Processing duration: " << duration << std::endl;
 //    edges.SaveCloud("../data/edge_points.pcd");
-    std::cout << "Segmenting edges" << std::endl;
+//    std::cout << "Segmenting edges" << std::endl;
     EdgeCloud edges;
     edges.ReadCloud("../data/edge_points.pcd");
     stpw.reset();
