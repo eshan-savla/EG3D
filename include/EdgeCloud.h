@@ -28,6 +28,8 @@ private:
     std::vector<unsigned int> num_pts_in_segment;
     std::vector<int> point_labels;
     std::vector<int> previous_seeds;
+    int total_num_of_segmented_pts;
+    int total_num_of_segments;
     unsigned int previous_size;
     float angle_thresh;
     bool is_appended;

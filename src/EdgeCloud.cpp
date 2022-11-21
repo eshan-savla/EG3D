@@ -9,12 +9,16 @@
 
 
 EdgeCloud::EdgeCloud() : new_points(new pcl::PointCloud<pcl::PointXYZ>), tree(new pcl::search::KdTree<pcl::PointXYZ>) {
+    total_num_of_segments = 0;
+    total_num_of_segmented_pts = 0;
     this->is_appended = false;
+    previous_size = 0;
 }
 
 EdgeCloud::EdgeCloud(const std::vector<int> &edge_indices, const pcl::PointCloud<pcl::PointXYZ>::Ptr &parent_cloud) :
         new_points(new pcl::PointCloud<pcl::PointXYZ>), tree(new pcl::search::KdTree<pcl::PointXYZ>) {
     this->is_appended = false;
+    previous_size = 0;
     LoadInCloud(edge_indices, parent_cloud);
 }
 
@@ -113,15 +117,15 @@ void EdgeCloud::ApplyRegionGrowing(const int &neighbours_k, const bool &sort) {
     int seed_counter;
     num_of_pts = static_cast<int> (cloud_data->size());
     if (is_appended && !override_cont) {
-        initial = previous_size;
-        seed_counter = previous_size;
+        initial = static_cast<int> (previous_size);
+        seed_counter = static_cast<int> (previous_size);
     }
     else {
         initial = 0;
         seed_counter = 0;
     }
     std::vector<int> point_labels_local; // temp vector to maintain labels of segmented points and make space for new
-    point_labels_local.resize(num_of_pts, -1);
+    point_labels_local.resize(num_of_pts - initial, -1);
     point_labels.insert(point_labels.end(), point_labels_local.begin(), point_labels_local.end());
     std::vector<std::pair<unsigned long, int>> point_residual;
     std::pair<unsigned long, int> pair;
@@ -132,15 +136,16 @@ void EdgeCloud::ApplyRegionGrowing(const int &neighbours_k, const bool &sort) {
         point_residual[i_point].second = point_index;
     }
     if(sort) {
-        // add sorting algorithm for linearity based sorting;
         std::sort(point_residual.begin(), point_residual.end(), Compare);
     }
 
     int seed = point_residual[seed_counter - seed_counter].second;
 
-    int num_of_segmented_pts = 0;
-    int num_of_segments = 0;
+    int num_of_segmented_pts = total_num_of_segmented_pts;
+    int num_of_segments = total_num_of_segments;
     while (num_of_segmented_pts < num_of_pts) {
+        // Iterate through all latest segments to check if seed belongs to existing segment
+        // If seed NOT belong to existing segment, grow new segment
         int pts_in_segment = GrowSegment(seed, num_of_segments, neighbours_k);
         num_of_segmented_pts += pts_in_segment;
         num_pts_in_segment.push_back(pts_in_segment);
@@ -155,13 +160,14 @@ void EdgeCloud::ApplyRegionGrowing(const int &neighbours_k, const bool &sort) {
             }
         }
     }
-
-
+    total_num_of_segmented_pts = num_of_segmented_pts;
+    total_num_of_segments = num_of_segments;
 }
 
 int EdgeCloud::GrowSegment(const int &initial_seed, const int &segment_id, const int &neighbours_k) {
     std::queue<int> seeds;
     seeds.push(initial_seed);
+    // Check if initial seed neighbours in segment
     point_labels[initial_seed] = segment_id;
 
     int num_pts = 1;
