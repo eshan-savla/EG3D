@@ -8,12 +8,12 @@
 #include "EdgeCloud.h"
 
 
-EdgeCloud::EdgeCloud() : edge_normals(new pcl::PointCloud<pcl::Normal>), tree(new pcl::search::KdTree<pcl::PointXYZ>) {
+EdgeCloud::EdgeCloud() : new_points(new pcl::PointCloud<pcl::PointXYZ>), tree(new pcl::search::KdTree<pcl::PointXYZ>) {
     this->is_appended = false;
 }
 
 EdgeCloud::EdgeCloud(const std::vector<int> &edge_indices, const pcl::PointCloud<pcl::PointXYZ>::Ptr &parent_cloud) :
-edge_normals(new pcl::PointCloud<pcl::Normal>), tree(new pcl::search::KdTree<pcl::PointXYZ>) {
+        new_points(new pcl::PointCloud<pcl::PointXYZ>), tree(new pcl::search::KdTree<pcl::PointXYZ>) {
     this->is_appended = false;
     LoadInCloud(edge_indices, parent_cloud);
 }
@@ -35,24 +35,21 @@ EdgeCloud::SegmentEdges(const int &neighbours_K, const float &dist_thresh, const
     std::cout << "Found " << num_pts_in_segment.size() << " segments." << std::endl;
 }
 
-void EdgeCloud::EstimateNormals(const int neighbours_K) {
-    pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> normal_estimator;
-    normal_estimator.setSearchMethod(tree);
-    normal_estimator.setInputCloud(cloud_data);
-    normal_estimator.setKSearch(neighbours_K);
-    normal_estimator.compute(*edge_normals);
-}
-
 void EdgeCloud::ComputeInliers(const int &neighbours_K, const float &dist_thresh) {
 
     pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
     kdtree.setInputCloud(cloud_data);
-#pragma omp parallel default(none) shared(neighbours_K, dist_thresh, neighbours_map, vectors_map, kdtree)
+    int initial;
+    if(is_appended && !override_cont)
+        initial = previous_size;
+    else
+        initial = 0;
+#pragma omp parallel default(none) shared(neighbours_K, dist_thresh, neighbours_map, vectors_map, kdtree, initial)
     {
         std::unordered_map<int, pcl::Indices> neighbours_map_thr;
         std::unordered_map<int, Eigen::Vector3f> vectors_map_thr;
 #pragma omp for nowait
-        for (int point_index = 0; point_index < cloud_data->size(); ++point_index) {
+        for (int point_index = initial; point_index < cloud_data->size(); ++point_index) {
             std::vector<int> neighbour_ids;
             std::vector<float> squared_distances;
             neighbour_ids.clear();
@@ -111,13 +108,25 @@ void EdgeCloud::ComputeInliers(const int &neighbours_K, const float &dist_thresh
 }
 
 void EdgeCloud::ApplyRegionGrowing(const int &neighbours_k, const bool &sort) {
-    int num_of_pts = static_cast<int> (cloud_data->size());
-    point_labels.resize(num_of_pts, -1);
-
+    int num_of_pts;
+    int initial; // set as 0 or last indice of previous pcl size + 1
+    int seed_counter;
+    num_of_pts = static_cast<int> (cloud_data->size());
+    if (is_appended && !override_cont) {
+        initial = previous_size;
+        seed_counter = previous_size;
+    }
+    else {
+        initial = 0;
+        seed_counter = 0;
+    }
+    std::vector<int> point_labels_local; // temp vector to maintain labels of segmented points and make space for new
+    point_labels_local.resize(num_of_pts, -1);
+    point_labels.insert(point_labels.end(), point_labels_local.begin(), point_labels_local.end());
     std::vector<std::pair<unsigned long, int>> point_residual;
     std::pair<unsigned long, int> pair;
     point_residual.resize(num_of_pts, pair);
-    for (int i_point = 0; i_point < num_of_pts; i_point++) {
+    for (int i_point = initial; i_point < num_of_pts; i_point++) {
         int point_index = i_point;
         point_residual[i_point].first = neighbours_map.at(point_index).size();
         point_residual[i_point].second = point_index;
@@ -127,8 +136,7 @@ void EdgeCloud::ApplyRegionGrowing(const int &neighbours_k, const bool &sort) {
         std::sort(point_residual.begin(), point_residual.end(), Compare);
     }
 
-    int seed_counter = 0;
-    int seed = point_residual[seed_counter].second;
+    int seed = point_residual[seed_counter - seed_counter].second;
 
     int num_of_segmented_pts = 0;
     int num_of_segments = 0;
@@ -267,7 +275,8 @@ void EdgeCloud::CreateColouredCloud(const std::string &path) {
 }
 
 void EdgeCloud::AddPoints(const pcl::PointCloud<pcl::PointXYZ>::Ptr &new_points) {
-    unsigned int previous_ind = cloud_data->size() - 1;
+    this->new_points = new_points;
+    previous_size = cloud_data->size();
     *cloud_data += *new_points;
     is_appended = true;
 }

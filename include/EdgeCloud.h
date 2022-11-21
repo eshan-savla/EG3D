@@ -22,18 +22,19 @@
 class EdgeCloud : public BaseCloud{
 private:
     std::vector<int> edge_points_indices;
-    pcl::PointCloud<pcl::Normal>::Ptr edge_normals;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr new_points;
     pcl::search::Search<pcl::PointXYZ>::Ptr tree;
     std::vector<pcl::PointIndices> clusters;
     std::vector<unsigned int> num_pts_in_segment;
     std::vector<int> point_labels;
+    std::vector<int> previous_seeds;
+    unsigned int previous_size;
     float angle_thresh;
     bool is_appended;
     bool override_cont;
     std::unordered_map<int, pcl::Indices> neighbours_map;
     std::unordered_map<int, Eigen::Vector3f> vectors_map;
 
-    void EstimateNormals(int neighbours_K);
     void ComputeInliers(const int &neighbours_K, const float &dist_thresh);
     void ApplyRegionGrowing(const int &neighbours_k, const bool &sort);
     int GrowSegment(const int &initial_seed, const int &segment_id, const int &neighbours_k);
