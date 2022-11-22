@@ -41,6 +41,7 @@ private:
     void ApplyRegionGrowing(const int &neighbours_k, const bool &sort);
     int GrowSegment(const int &initial_seed, const int &segment_id, const int &neighbours_k);
     bool CheckPoint(const int &current_seed, const int &neighbour, bool &is_a_seed);
+    int ExtendSegment(const int &new_point, const int &neighbour, const int &segment_id, const int &neighbours_k);
     void AssembleRegions();
 
 public:
