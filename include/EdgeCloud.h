@@ -28,6 +28,7 @@ private:
     std::vector<unsigned int> num_pts_in_segment;
     std::vector<int> point_labels;
     std::vector<int> previous_seeds;
+    float seg_tag_thresh;
     int total_num_of_segmented_pts;
     int total_num_of_segments;
     unsigned int previous_size;
@@ -36,12 +37,20 @@ private:
     bool override_cont;
     std::unordered_map<int, pcl::Indices> neighbours_map;
     std::unordered_map<int, Eigen::Vector3f> vectors_map;
+    std::unordered_map<int, Eigen::Vector3f> segment_vectors;
+    std::unordered_map<int, bool> finished_segments;
 
+    Eigen::Vector3f scan_direction;
+
+    void Init();
     void ComputeInliers(const int &neighbours_K, const float &dist_thresh);
     void ApplyRegionGrowing(const int &neighbours_k, const bool &sort);
-    int GrowSegment(const int &initial_seed, const int &segment_id, const int &neighbours_k);
+    int GrowSegment(const int &initial_seed, const int &segment_id, const int &neighbours_k,
+                    Eigen::Vector3f &segment_vector);
     bool CheckPoint(const int &current_seed, const int &neighbour, bool &is_a_seed);
-    int ExtendSegment(const int &new_point, const int &neighbour, const int &segment_id, const int &neighbours_k);
+    int ExtendSegment(const int &new_point, const int &neighbour, const int &segment_id, const int &neighbours_k,
+                      Eigen::Vector3f &segment_vector);
+    bool IsFinished(const int &label);
     void AssembleRegions();
 
 public:
@@ -52,6 +61,8 @@ public:
                       const bool &override_cont);
     void CreateColouredCloud(const std::string &path);
     void AddPoints(const pcl::PointCloud<pcl::PointXYZ>::Ptr &new_points);
+    void SetTagThresh(const float &seg_tag_thresh);
+    void SetScanDirection(const Eigen::Vector3f &scan_direction);
 };
 
 inline bool Compare(std::pair<unsigned long, int> i, std::pair<unsigned long, int> j) {

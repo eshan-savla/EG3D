@@ -9,16 +9,13 @@
 
 
 EdgeCloud::EdgeCloud() : new_points(new pcl::PointCloud<pcl::PointXYZ>), tree(new pcl::search::KdTree<pcl::PointXYZ>) {
-    total_num_of_segments = -1;
-    total_num_of_segmented_pts = 0;
-    this->is_appended = false;
-    previous_size = 0;
+    Init();
 }
 
 EdgeCloud::EdgeCloud(const std::vector<int> &edge_indices, const pcl::PointCloud<pcl::PointXYZ>::Ptr &parent_cloud) :
         new_points(new pcl::PointCloud<pcl::PointXYZ>), tree(new pcl::search::KdTree<pcl::PointXYZ>) {
-    this->is_appended = false;
-    previous_size = 0;
+
+    Init();
     LoadInCloud(edge_indices, parent_cloud);
 }
 
@@ -148,12 +145,18 @@ void EdgeCloud::ApplyRegionGrowing(const int &neighbours_k, const bool &sort) {
         if (is_appended && !override_cont) {
             for (const int &neighbour: neighbours_map.at(seed)) {
                 int label = point_labels.at(neighbour);
-                if (label != -1) // Add and statement to check if segment extendable
+                if (label != -1 && finished_segments.at(label)) // Add and statement to check if segment extendable
                 {
-                    int new_pts_in_segment = ExtendSegment(seed, neighbour, label, neighbours_k);
+                    Eigen::Vector3f seg_vec = segment_vectors.at(label);
+                    int new_pts_in_segment = ExtendSegment(seed, neighbour, label, neighbours_k, seg_vec);
                     if (new_pts_in_segment == 0)
                         continue; // seed could not be added to segment in label
                     else {
+                        segment_vectors.at(label) = seg_vec;
+                        if (IsFinished(label))
+                            finished_segments.at(label) = true;
+                        else
+                            finished_segments.at(label) = false;
                         new_segment_needed = false;
                         num_of_segmented_pts += new_pts_in_segment;
                         num_pts_in_segment.at(label) += new_pts_in_segment;
@@ -164,7 +167,14 @@ void EdgeCloud::ApplyRegionGrowing(const int &neighbours_k, const bool &sort) {
         }
         // If seed NOT belong to existing segment, grow new segment
         if (new_segment_needed) {
-            int pts_in_segment = GrowSegment(seed, num_of_segments, neighbours_k);
+            Eigen::Vector3f seg_vec;
+            seg_vec.setZero();
+            int pts_in_segment = GrowSegment(seed, num_of_segments, neighbours_k, seg_vec);
+            segment_vectors.at(num_of_segments) = seg_vec;
+            if (IsFinished(num_of_segments))
+                finished_segments.at(num_of_segments) = true;
+            else
+                finished_segments.at(num_of_segments) = false;
             num_of_segmented_pts += pts_in_segment;
             num_pts_in_segment.push_back(pts_in_segment);
             num_of_segments++;
@@ -183,7 +193,8 @@ void EdgeCloud::ApplyRegionGrowing(const int &neighbours_k, const bool &sort) {
     total_num_of_segments = num_of_segments;
 }
 
-int EdgeCloud::GrowSegment(const int &initial_seed, const int &segment_id, const int &neighbours_k) {
+int EdgeCloud::GrowSegment(const int &initial_seed, const int &segment_id, const int &neighbours_k,
+                           Eigen::Vector3f &segment_vector) {
     std::queue<int> seeds;
     seeds.push(initial_seed);
     // Check if initial seed neighbours in segment
@@ -215,6 +226,7 @@ int EdgeCloud::GrowSegment(const int &initial_seed, const int &segment_id, const
                 seeds.push(index);
             i_nghbr++;
         }
+        segment_vector += vectors_map.at(current_seed);
     }
     return num_pts;
 }
@@ -307,11 +319,37 @@ void EdgeCloud::AddPoints(const pcl::PointCloud<pcl::PointXYZ>::Ptr &new_points)
     is_appended = true;
 }
 
-int EdgeCloud::ExtendSegment(const int &new_point, const int &neighbour, const int &segment_id, const int &neighbours_k) {
+int EdgeCloud::ExtendSegment(const int &new_point, const int &neighbour, const int &segment_id, const int &neighbours_k,
+                             Eigen::Vector3f &segment_vector) {
     int num_pts = 0;
     bool irrelevant;
     bool in_segment = CheckPoint(neighbour, new_point, irrelevant);
     if (in_segment)
-        num_pts = GrowSegment(new_point, segment_id, neighbours_k);
+        num_pts = GrowSegment(new_point, segment_id, neighbours_k, segment_vector);
     return num_pts;
+}
+
+bool EdgeCloud::IsFinished(const int &label) {
+    if (scan_direction.norm() == 0)
+        throw std::invalid_argument("Scan direction vector was not provided");
+    Eigen::Vector3f seg_direction = segment_vectors.at(label);
+    float angle_btw = std::abs(scan_direction.dot(seg_direction))/(scan_direction.norm() * seg_direction.norm());
+    return (angle_btw < seg_tag_thresh);
+}
+
+void EdgeCloud::SetTagThresh(const float &seg_tag_thresh) {
+    this->seg_tag_thresh = seg_tag_thresh;
+}
+
+void EdgeCloud::SetScanDirection(const Eigen::Vector3f &scan_direction) {
+    this->scan_direction = scan_direction;
+}
+
+void EdgeCloud::Init() {
+    total_num_of_segments = -1;
+    total_num_of_segmented_pts = 0;
+    this->is_appended = false;
+    previous_size = 0;
+    seg_tag_thresh = 85.0 / 180.0 * M_PI;
+    scan_direction.setZero();
 }
