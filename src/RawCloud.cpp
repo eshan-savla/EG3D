@@ -6,64 +6,50 @@
 #include <cmath>
 #include <vector>
 #include <random>
-#include <omp.h>
+#include "EdgeCloud.h"
 
 
-RawCloud::RawCloud(const std::string &file_path) : raw_cloud(new pcl::PointCloud<pcl::PointXYZ>) {
+RawCloud::RawCloud() : BaseCloud() {
     is_filtered = false;
-    count_before = 0;
-    count_after = 0;
-    ReadCloud(file_path);
 }
 
-RawCloud::RawCloud(const bool gen_cloud, const int pcl_size) : raw_cloud(new pcl::PointCloud<pcl::PointXYZ>) {
-    raw_cloud->width    = pcl_size;
-    raw_cloud->height   = 1;
-    raw_cloud->is_dense = false;
-    raw_cloud->points.resize (raw_cloud->width * raw_cloud->height);
-    for (int i = 0; i < static_cast<int>(raw_cloud->size ()); ++i)
-      {
+void RawCloud::GenerateCloud(const int &pcl_size) {
+    cloud_data->width    = pcl_size;
+    cloud_data->height   = 1;
+    cloud_data->is_dense = false;
+    cloud_data->points.resize (cloud_data->width * cloud_data->height);
+    for (int i = 0; i < static_cast<int>(cloud_data->size ()); ++i)
+    {
         {
-              (*raw_cloud)[i].x = 1024 * rand () / (RAND_MAX + 1.0);
-              (*raw_cloud)[i].y = 1024 * rand () / (RAND_MAX + 1.0);
-              if( i % 2 == 0)
-                    (*raw_cloud)[i].z = 1024 * rand () / (RAND_MAX + 1.0);
-              else
-                (*raw_cloud)[i].z = -1 * ((*raw_cloud)[i].x + (*raw_cloud)[i].y);
-            }
-            pcl::io::savePCDFileASCII("../data/orignal.pcd", *raw_cloud);
-      }
+            (*cloud_data)[i].x = 1024 * rand () / (RAND_MAX + 1.0);
+            (*cloud_data)[i].y = 1024 * rand () / (RAND_MAX + 1.0);
+            if( i % 2 == 0)
+                (*cloud_data)[i].z = 1024 * rand () / (RAND_MAX + 1.0);
+            else
+                (*cloud_data)[i].z = -1 * ((*cloud_data)[i].x + (*cloud_data)[i].y);
+        }
+        pcl::io::savePCDFileASCII("../data/orignal.pcd", *cloud_data);
     }
-void RawCloud::ReadCloud(const std::string &file_path) {
-    int status = pcl::io::loadPCDFile(file_path, *raw_cloud);
-    if (status == -1) {
-        PCL_ERROR("Couldn't read file");
-    }
-    count_before = raw_cloud->width * raw_cloud->height;
-    std::cout << "Loaded " << count_before << " data points" << std::endl;
-    std::cout << "Point cloud is organised: " << raw_cloud->isOrganized() << std::endl;
-}
-unsigned int RawCloud::GetCount() {
-    return raw_cloud->height * raw_cloud->width;
 }
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr RawCloud::GetCloud() {
-    return raw_cloud;
+    return cloud_data;
 }
 
 void RawCloud::VoxelDownSample(const float &leaf_size) {
     pcl::VoxelGrid<pcl::PointXYZ> vg_sampler;
-    vg_sampler.setInputCloud(raw_cloud);
+    vg_sampler.setInputCloud(cloud_data);
     vg_sampler.setLeafSize(leaf_size, leaf_size, leaf_size);
-    vg_sampler.filter(*raw_cloud);
+    vg_sampler.filter(*cloud_data);
+    is_filtered = true;
 }
 unsigned int RawCloud::StatOutlierRemoval(const int MeanK, const float StddevMulThresh) {
     if (count_before != GetCount()) count_before = GetCount();
     pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
-    sor.setInputCloud(raw_cloud);
+    sor.setInputCloud(cloud_data);
     sor.setMeanK(MeanK);
     sor.setStddevMulThresh(StddevMulThresh);
-    sor.filter(*raw_cloud);
+    sor.filter(*cloud_data);
     is_filtered = true;
     count_after = GetCount();
     return count_before - count_after;
@@ -71,17 +57,17 @@ unsigned int RawCloud::StatOutlierRemoval(const int MeanK, const float StddevMul
 
 unsigned int RawCloud::StatOutlierRemoval(const int MeanK, const float StddevMulThresh, std::string &out_path) {
     unsigned int diff = StatOutlierRemoval(MeanK, StddevMulThresh);
-    pcl::io::savePCDFileASCII(out_path, *raw_cloud);
+    pcl::io::savePCDFileASCII(out_path, *cloud_data);
     return diff;
 }
 
 unsigned int RawCloud::RadOutlierRemoval(const float Radius, const int MinNeighbours) {
     if (count_before != GetCount()) count_before = GetCount();
     pcl::RadiusOutlierRemoval<pcl::PointXYZ> ror;
-    ror.setInputCloud(raw_cloud);
+    ror.setInputCloud(cloud_data);
     ror.setRadiusSearch(Radius);
     ror.setMinNeighborsInRadius(MinNeighbours);
-    ror.filter(*raw_cloud);
+    ror.filter(*cloud_data);
     is_filtered = true;
     count_after = GetCount();
     return count_before - count_after;
@@ -89,25 +75,26 @@ unsigned int RawCloud::RadOutlierRemoval(const float Radius, const int MinNeighb
 
 unsigned int RawCloud::RadOutlierRemoval(const float Radius, const int MinNeighbours, std::string &out_path) {
     unsigned int diff = RadOutlierRemoval(Radius, MinNeighbours);
-    pcl::io::savePCDFileASCII(out_path, *raw_cloud);
+    pcl::io::savePCDFileASCII(out_path, *cloud_data);
     return diff;
 }
 
-void RawCloud::FindEdgePoints(const int no_neighbours, const double angular_thresh_rads,
-                              std::vector<int> &edge_points_global, const float dist_thresh, const float radius,
-                              const bool radial_search) {
+EdgeCloud RawCloud::FindEdgePoints(const int no_neighbours, const double angular_thresh_rads,
+                                   std::vector<int> &edge_points_global, const float dist_thresh, const float radius,
+                                   const bool radial_search) {
+    if (!is_filtered)
+        PCL_WARN("Downsampling or filtering the point cloud is recommended!");
     const int K = no_neighbours;
     pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
-    kdtree.setInputCloud(raw_cloud);
+    kdtree.setInputCloud(cloud_data);
 #pragma omp parallel default(none) shared(angular_thresh_rads, edge_points_global, dist_thresh, radius, radial_search, kdtree, K)
     {
         std::vector<int> edge_points_thread;
-//#pragma omp parallel for shared(kdtree, K, edge_points_global, radius, dist_thresh, angular_thresh_rads) private(edge_points_thread, neighbour_ids, neighbour_sqdist, origin, local_inliers, global_inliers, neighbours_cloud, plane_parameters, G0)
         #pragma omp for nowait
-        for (int i = 0; i < static_cast<int>(raw_cloud->size()); ++i) {
+        for (int i = 0; i < static_cast<int>(cloud_data->size()); ++i) {
             std::vector<int> neighbour_ids(K);
             std::vector<float> neighbour_sqdist(K);
-            const pcl::PointXYZ origin = raw_cloud->at(i);
+            const pcl::PointXYZ origin = cloud_data->at(i);
             if (radial_search) {
                 if (kdtree.radiusSearch(origin, radius, neighbour_ids, neighbour_sqdist) < 3)
                     continue;
@@ -130,8 +117,9 @@ void RawCloud::FindEdgePoints(const int no_neighbours, const double angular_thre
             }
         }
 #pragma omp critical
-    edge_points_global.insert(edge_points_global.end(), edge_points_thread.begin(), edge_points_thread.end());
+        edge_points_global.insert(edge_points_global.end(), edge_points_thread.begin(), edge_points_thread.end());
     }
+    return EdgeCloud(edge_points_global, cloud_data);
 }
 
 
@@ -150,18 +138,6 @@ void RawCloud::ComputeInliers(const float &dist_thresh, std::vector<int> &neighb
     for (int &elem : local_inliers) {
         global_inliers.push_back(neighbours[elem]);
     }
-    /*pcl::PointCloud<pcl::PointXYZ>::Ptr save_pcl (new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::copyPointCloud(*neighbour_cloud, local_inliers, *save_pcl);
-    pcl::io::savePCDFileASCII("../data/section_plane.pcd", *save_pcl);*/
-}
-
-void RawCloud::ExtractIndices(const std::vector<int> &indices, pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud) {
-    pcl::IndicesPtr indices_ptr (new pcl::Indices (indices));
-    pcl::ExtractIndices<pcl::PointXYZ> extractor;
-    extractor.setInputCloud(raw_cloud);
-    extractor.setIndices(indices_ptr);
-    extractor.setNegative(false);
-    extractor.filter(*cloud);
 }
 
 std::tuple<Eigen::Vector4f, float> RawCloud::EstimateNormals(pcl::PointCloud<pcl::PointXYZ>::Ptr &input_cloud,
@@ -203,13 +179,12 @@ double RawCloud::ComputeAngularGap(const pcl::PointXYZ &origin, pcl::PointCloud<
             double theta = std::atan2(du, dv);
             if (theta < 0)
                 theta += 2 * M_PI;
-            int b = 0;
             thetas_thread.push_back(theta);
         }
 #pragma omg critical
         thetas_global.insert(thetas_global.end(), thetas_thread.begin(), thetas_thread.end());
     }
-    if (thetas_global.size() <= 1) return 0;
+    if (thetas_global.size() <= 1) return 0.0;
     else {
         std::sort(thetas_global.begin(), thetas_global.end());
         for (int i = 0; i < thetas_global.size() - 1; ++i)
@@ -219,16 +194,3 @@ double RawCloud::ComputeAngularGap(const pcl::PointXYZ &origin, pcl::PointCloud<
     }
 }
 
-void RawCloud::CreateVector(const pcl::PointXYZ &pt1, const pcl::PointXYZ &pt2, Eigen::Vector3f &vec) {
-    Eigen::Vector3f e_1_vector = pt1.getVector3fMap();
-    Eigen::Vector3f e_2_vector = pt2.getVector3fMap();
-    vec = e_2_vector - e_1_vector;
-}
-
-bool RawCloud::InInliers(int &origin, std::vector<int> &global_inliers) {
-    if (global_inliers.empty()) return false;
-    if (std::find(global_inliers.begin(), global_inliers.end(), origin) != global_inliers.end())
-        return true;
-    else
-        return false;
-}
