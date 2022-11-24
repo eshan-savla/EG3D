@@ -9,12 +9,9 @@ This library makes use of the [Point Cloud Library](https://pointclouds.org/) an
 [OpenMP](https://www.openmp.org/).
 
 ## Current Stand
-Currently, the library is capable of computing edge points of any point cloud object, albeit at a lower performance. 
-Drastic performance increase using parallelized for loops from OpenMP
+Currently, the library is capable of isolating edge points and segmenting feature lines from it. 2D as well as 3D
+Information can be derived from the segments but is not within the scope of this thesis.
 
 ## Future Implementations
-- Edge detection (smooth lines)
-- Recognition of 2D geometric profiles
-- 3D profile information
 - online edge detection
 - ROS Wrapper
