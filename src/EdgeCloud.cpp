@@ -12,11 +12,20 @@ EdgeCloud::EdgeCloud() : new_points(new pcl::PointCloud<pcl::PointXYZ>), tree(ne
     Init();
 }
 
+EdgeCloud::EdgeCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud) {
+    Init();
+    LoadInCloud(cloud);
+}
+
 EdgeCloud::EdgeCloud(const std::vector<int> &edge_indices, const pcl::PointCloud<pcl::PointXYZ>::Ptr &parent_cloud) :
         new_points(new pcl::PointCloud<pcl::PointXYZ>), tree(new pcl::search::KdTree<pcl::PointXYZ>) {
 
     Init();
     LoadInCloud(edge_indices, parent_cloud);
+}
+
+void EdgeCloud::LoadInCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud) {
+    cloud_data = cloud;
 }
 
 void EdgeCloud::LoadInCloud(const std::vector<int> &edge_indices, const pcl::PointCloud<pcl::PointXYZ>::Ptr & parent_cloud) {
@@ -353,3 +362,4 @@ void EdgeCloud::Init() {
     seg_tag_thresh = 85.0 / 180.0 * M_PI;
     scan_direction.setZero();
 }
+

@@ -79,9 +79,9 @@ unsigned int RawCloud::RadOutlierRemoval(const float Radius, const int MinNeighb
     return diff;
 }
 
-EdgeCloud RawCloud::FindEdgePoints(const int no_neighbours, const double angular_thresh_rads,
-                                   std::vector<int> &edge_points_global, const float dist_thresh, const float radius,
-                                   const bool radial_search) {
+pcl::PointCloud<pcl::PointXYZ> RawCloud::FindEdgePoints(const int no_neighbours, const double angular_thresh_rads,
+                                                        std::vector<int> &edge_points_global, const float dist_thresh, const float radius,
+                                                        const bool radial_search) {
     if (!is_filtered)
         PCL_WARN("Downsampling or filtering the point cloud is recommended!");
     const int K = no_neighbours;
@@ -119,7 +119,9 @@ EdgeCloud RawCloud::FindEdgePoints(const int no_neighbours, const double angular
 #pragma omp critical
         edge_points_global.insert(edge_points_global.end(), edge_points_thread.begin(), edge_points_thread.end());
     }
-    return EdgeCloud(edge_points_global, cloud_data);
+    pcl::PointCloud<pcl::PointXYZ> return_cloud;
+    pcl::copyPointCloud(*cloud_data, edge_points_global, return_cloud);
+    return return_cloud;
 }
 
 
