@@ -43,8 +43,7 @@ private:
     Eigen::Vector3f scan_direction;
 
     void Init();
-    void ComputeInliers(const int &neighbours_K, const float &dist_thresh);
-    void ApplyRegionGrowing(const int &neighbours_k, const bool &sort);
+
     int GrowSegment(const int &initial_seed, const int &segment_id, const int &neighbours_k,
                     Eigen::Vector3f &segment_vector);
     bool CheckPoint(const int &current_seed, const int &neighbour, bool &is_a_seed);
@@ -61,6 +60,9 @@ public:
     void LoadInCloud(const std::vector<int> &edge_indices, const pcl::PointCloud<pcl::PointXYZ>::Ptr & parent_cloud);
     void SegmentEdges(const int &neighbours_K, const float &dist_thresh, const float &angle_thresh, const bool &sort,
                       const bool &override_cont);
+    void ComputeVectors(const int &neighbours_K, const float &dist_thresh, const bool &override);
+    void
+    ApplyRegionGrowing(const int &neighbours_k, const float &angle_thresh, const bool &sort);
     void CreateColouredCloud(const std::string &path);
     void AddPoints(const pcl::PointCloud<pcl::PointXYZ>::Ptr &new_points);
     void SetTagThresh(const float &seg_tag_thresh);

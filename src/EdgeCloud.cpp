@@ -37,16 +37,15 @@ void
 EdgeCloud::SegmentEdges(const int &neighbours_K, const float &dist_thresh, const float &angle_thresh, const bool &sort,
                         const bool &override_cont) {
 
-    this->angle_thresh = angle_thresh;
-    this->override_cont = override_cont;
-    ComputeInliers(neighbours_K, dist_thresh);
-    ApplyRegionGrowing(neighbours_K, sort);
+    ComputeVectors(neighbours_K, dist_thresh, override_cont);
+    ApplyRegionGrowing(neighbours_K, angle_thresh, sort);
     AssembleRegions();
     std::cout << "Found " << num_pts_in_segment.size() << " segments." << std::endl;
 }
 
-void EdgeCloud::ComputeInliers(const int &neighbours_K, const float &dist_thresh) {
+void EdgeCloud::ComputeVectors(const int &neighbours_K, const float &dist_thresh, const bool &override) {
 
+    this->override_cont = override;
     pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
     kdtree.setInputCloud(cloud_data);
     int initial;
@@ -117,7 +116,9 @@ void EdgeCloud::ComputeInliers(const int &neighbours_K, const float &dist_thresh
     int b = 0;
 }
 
-void EdgeCloud::ApplyRegionGrowing(const int &neighbours_k, const bool &sort) {
+void EdgeCloud::ApplyRegionGrowing(const int &neighbours_k, const float &angle_thresh, const bool &sort) {
+    this->angle_thresh = angle_thresh;
+
     int num_of_pts;
     int initial; // set as 0 or last indice of previous pcl size + 1
     int seed_counter;
