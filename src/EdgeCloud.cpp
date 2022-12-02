@@ -24,7 +24,7 @@ EdgeCloud::EdgeCloud(const std::vector<int> &edge_indices, const pcl::PointCloud
     LoadInCloud(edge_indices, parent_cloud);
 }
 
-void EdgeCloud::LoadInCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud) {
+void EdgeCloud::LoadInCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud) {
     cloud_data = cloud;
 }
 
@@ -323,10 +323,14 @@ void EdgeCloud::CreateColouredCloud(const std::string &path) {
 }
 
 void EdgeCloud::AddPoints(const pcl::PointCloud<pcl::PointXYZ>::Ptr &new_points) {
-    this->new_points = new_points;
-    previous_size = cloud_data->size();
-    *cloud_data += *new_points;
-    is_appended = true;
+    if (cloud_data->empty())
+        LoadInCloud(new_points);
+    else {
+        this->new_points = new_points;
+        previous_size = cloud_data->size();
+        *cloud_data += *new_points;
+        is_appended = true;
+    }
 }
 
 int EdgeCloud::ExtendSegment(const int &new_point, const int &neighbour, const int &segment_id, const int &neighbours_k,
