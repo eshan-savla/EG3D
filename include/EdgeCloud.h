@@ -56,8 +56,7 @@ public:
     EdgeCloud();
     EdgeCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud);
     EdgeCloud(const std::vector<int> &edge_indices, const pcl::PointCloud<pcl::PointXYZ>::Ptr& parent_cloud);
-    void LoadInCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud);
-    void LoadInCloud(const std::vector<int> &edge_indices, const pcl::PointCloud<pcl::PointXYZ>::Ptr & parent_cloud);
+
     void SegmentEdges(const int &neighbours_K, const float &dist_thresh, const float &angle_thresh, const bool &sort,
                       const bool &override_cont);
     void ComputeVectors(const int &neighbours_K, const float &dist_thresh, const bool &override);

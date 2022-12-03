@@ -17,6 +17,14 @@ void BaseCloud::ReadCloud(const std::string &file_path) {
     std::cout << "Point cloud is organised: " << cloud_data->isOrganized() << std::endl;
 }
 
+void BaseCloud::LoadInCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud) {
+    cloud_data = cloud;
+}
+
+void BaseCloud::LoadInCloud(const std::vector<int> &edge_indices, const pcl::PointCloud<pcl::PointXYZ>::Ptr & parent_cloud) {
+    pcl::copyPointCloud(*parent_cloud, edge_indices, *cloud_data);
+}
+
 void BaseCloud::SaveCloud(const std::string &file_path) {
     pcl::io::savePCDFileASCII(file_path, *cloud_data);
 }

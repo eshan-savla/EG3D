@@ -26,6 +26,8 @@ protected:
 
 public:
     BaseCloud();
+    void LoadInCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud);
+    void LoadInCloud(const std::vector<int> &edge_indices, const pcl::PointCloud<pcl::PointXYZ>::Ptr & parent_cloud);
     void ReadCloud(const std::string &file_path);
     void SaveCloud(const std::string &file_path);
     unsigned int GetCount();

@@ -24,14 +24,6 @@ EdgeCloud::EdgeCloud(const std::vector<int> &edge_indices, const pcl::PointCloud
     LoadInCloud(edge_indices, parent_cloud);
 }
 
-void EdgeCloud::LoadInCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud) {
-    cloud_data = cloud;
-}
-
-void EdgeCloud::LoadInCloud(const std::vector<int> &edge_indices, const pcl::PointCloud<pcl::PointXYZ>::Ptr & parent_cloud) {
-    edge_points_indices = edge_indices;
-    pcl::copyPointCloud(*parent_cloud, edge_indices, *cloud_data);
-}
 
 void
 EdgeCloud::SegmentEdges(const int &neighbours_K, const float &dist_thresh, const float &angle_thresh, const bool &sort,
