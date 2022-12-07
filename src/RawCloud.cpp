@@ -80,11 +80,12 @@ unsigned int RawCloud::RadOutlierRemoval(const float Radius, const int MinNeighb
 }
 
 pcl::PointCloud<pcl::PointXYZ> RawCloud::FindEdgePoints(const int no_neighbours, const double angular_thresh_rads,
-                                                        std::vector<int> &edge_points_global, const float dist_thresh, const float radius,
+                                                        const float dist_thresh, const float radius,
                                                         const bool radial_search) {
     if (!is_filtered)
         PCL_WARN("Downsampling or filtering the point cloud is recommended!");
     const int K = no_neighbours;
+    std::vector<int> edge_points_global;
     pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
     kdtree.setInputCloud(cloud_data);
 #pragma omp parallel default(none) shared(angular_thresh_rads, edge_points_global, dist_thresh, radius, radial_search, kdtree, K)

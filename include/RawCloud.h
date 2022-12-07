@@ -40,7 +40,7 @@ public:
     unsigned int RadOutlierRemoval(float Radius, int MinNeighbours);
     unsigned int RadOutlierRemoval(float Radius, int MinNeighbours, std::string &out_path);
     pcl::PointCloud<pcl::PointXYZ> FindEdgePoints(const int no_neighbours, const double angular_thresh_rads,
-                                                  std::vector<int> &edge_points_global, const float dist_thresh = 0.01,
+                                                  const float dist_thresh = 0.01,
                                                   const float radius = 0.1, const bool radial_search = false);
     void VoxelDownSample(const float &leaf_size);
 

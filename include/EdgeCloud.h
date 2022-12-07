@@ -24,7 +24,7 @@ private:
     std::vector<int> edge_points_indices;
     pcl::PointCloud<pcl::PointXYZ>::Ptr new_points;
     pcl::search::Search<pcl::PointXYZ>::Ptr tree;
-    std::vector<pcl::PointIndices> clusters;
+    std::vector<std::vector<int>> clusters;
     std::vector<unsigned int> num_pts_in_segment;
     std::vector<int> point_labels;
     std::vector<int> previous_seeds;
@@ -50,7 +50,6 @@ private:
     int ExtendSegment(const int &new_point, const int &neighbour, const int &segment_id, const int &neighbours_k,
                       Eigen::Vector3f &segment_vector);
     bool IsFinished(const int &label);
-    void AssembleRegions();
 
 public:
     EdgeCloud();
@@ -66,6 +65,8 @@ public:
     void AddPoints(const pcl::PointCloud<pcl::PointXYZ>::Ptr &new_points);
     void SetTagThresh(const float &seg_tag_thresh);
     void SetScanDirection(const Eigen::Vector3f &scan_direction);
+    void AssembleRegions();
+
 };
 
 inline bool Compare(std::pair<unsigned long, int> i, std::pair<unsigned long, int> j) {
