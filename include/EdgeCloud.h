@@ -7,6 +7,10 @@
 
 #pragma once
 #include "BaseCloud.h"
+#include "BoundingBox.h"
+#include "Region2D.h"
+
+
 #include <pcl/features/normal_3d_omp.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/filters/filter_indices.h>
@@ -15,8 +19,7 @@
 #include <pcl/sample_consensus/ransac.h>
 #include <pcl/sample_consensus/sac_model_line.h>
 #include <pcl/segmentation/sac_segmentation.h>
-#include <string>
-
+#include <pcl/common/common.h>
 
 
 class EdgeCloud : public BaseCloud{
@@ -28,6 +31,7 @@ private:
     std::vector<unsigned int> num_pts_in_segment;
     std::vector<int> point_labels;
     std::vector<int> previous_seeds;
+
     float seg_tag_thresh;
     int total_num_of_segmented_pts;
     int total_num_of_segments;
@@ -35,10 +39,12 @@ private:
     float angle_thresh;
     bool is_appended;
     bool override_cont;
-    std::unordered_map<int, pcl::Indices> neighbours_map;
-    std::unordered_map<int, Eigen::Vector3f> vectors_map;
+
+    std::unordered_map<unsigned long, pcl::Indices> neighbours_map;
+    std::unordered_map<unsigned long, Eigen::Vector3f> vectors_map;
     std::unordered_map<int, Eigen::Vector3f> segment_vectors;
     std::unordered_map<int, bool> finished_segments;
+    std::unordered_map<unsigned long, bool> false_edges;
 
     Eigen::Vector3f scan_direction;
 
@@ -59,6 +65,7 @@ public:
     void SegmentEdges(const int &neighbours_K, const float &dist_thresh, const float &angle_thresh, const bool &sort,
                       const bool &override_cont);
     void ComputeVectors(const int &neighbours_K, const float &dist_thresh, const bool &override);
+    void RemoveFalseEdges(float region_width);
     void
     ApplyRegionGrowing(const int &neighbours_k, const float &angle_thresh, const bool &sort);
     void CreateColouredCloud(const std::string &path);

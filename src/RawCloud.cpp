@@ -92,7 +92,7 @@ pcl::PointCloud<pcl::PointXYZ> RawCloud::FindEdgePoints(const int no_neighbours,
     {
         std::vector<int> edge_points_thread;
         #pragma omp for nowait
-        for (int i = 0; i < static_cast<int>(cloud_data->size()); ++i) {
+        for (std::size_t i = 0; i < static_cast<int>(cloud_data->size()); ++i) {
             std::vector<int> neighbour_ids(K);
             std::vector<float> neighbour_sqdist(K);
             const pcl::PointXYZ origin = cloud_data->at(i);

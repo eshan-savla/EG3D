@@ -21,7 +21,7 @@ int main(int argc, const char * argv[]) {
     std::cout << "Beginning edge point search" << std::endl;
     stpw.reset();
     pcl::PointCloud<pcl::PointXYZ>::Ptr edge_cloud (new pcl::PointCloud<pcl::PointXYZ>);
-    *edge_cloud = raw_input.FindEdgePoints(200, M_PI_2, edge_points, 0.01);
+    *edge_cloud = raw_input.FindEdgePoints(200, M_PI_2, 0.01);
     EdgeCloud edges(edge_cloud);
     double duration = stpw.getTimeSeconds();
     std::cout << "Processing duration: " << duration << std::endl;
