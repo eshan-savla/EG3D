@@ -374,9 +374,9 @@ void EdgeCloud::RemoveFalseEdges(float region_width) {
     pcl::PointXYZ min, max;
     pcl::getMinMax3D(*new_points, min, max);
     BoundingBox b_box(min, max);
-    pcl::PointXYZ* box_points;
-    box_points = b_box.GetPoints();
-    Region2D false_region(*(box_points + 6), *(box_points + 7), region_width);
+    pcl::PointXYZ box_points[8];
+    b_box.GetPoints(box_points);
+    Region2D false_region(box_points[6], box_points[7], region_width);
 
     for (std::size_t point_index = previous_size; point_index < cloud_data->size(); ++point_index) {
         if (false_region.ChechIfPointInRegion(cloud_data->at(point_index))

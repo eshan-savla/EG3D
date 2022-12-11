@@ -16,7 +16,7 @@ private:
 
 public:
     BoundingBox(const pcl::PointXYZ& min, const pcl::PointXYZ& max);
-    pcl::PointXYZ* GetPoints();
+    void BoundingBox::GetPoints(pcl::PointXYZ *points);
 
 };
 

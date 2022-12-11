@@ -23,8 +23,9 @@ void BoundingBox::InitPoints() {
     this->P5 = P5; this->P6 = P6; this->P7 = P7;
 }
 
-pcl::PointXYZ *BoundingBox::GetPoints() {
-    pcl::PointXYZ points[8] = {P1, P2, P3, P4, P5, P6, P7, P8};
-    return points;
-
+void BoundingBox::GetPoints(pcl::PointXYZ *points) {
+    pcl::PointXYZ points_ [8] = {P1, P2, P3, P4, P5, P6, P7, P8};
+    for (int i = 0; i < 8; i++)
+        *(points + i) = points_[i];
+    
 }
