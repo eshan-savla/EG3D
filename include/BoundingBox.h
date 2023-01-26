@@ -7,6 +7,15 @@
 
 #include <pcl/point_types.h>
 #include <pcl/point_representation.h>
+#include <pcl/common/centroid.h>
+#include <pcl/common/pca.h>
+#include <pcl/common/common.h>
+#include <pcl/features/moment_of_inertia_estimation.h>
+#include <pcl/io/pcd_io.h>
+
+// #include <pcl/visualization/pcl_visualizer.h>
+//#include <Eigen/Eigenvalues>
+
 
 class BoundingBox {
 private:
@@ -15,7 +24,7 @@ private:
     float width, height, depth;
 
 public:
-    BoundingBox(const pcl::PointXYZ& min, const pcl::PointXYZ& max);
+    explicit BoundingBox(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud_section);
     void GetPoints(pcl::PointXYZ *points);
 
 };

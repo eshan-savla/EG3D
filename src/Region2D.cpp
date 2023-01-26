@@ -4,18 +4,39 @@
 
 #include "Region2D.h"
 
-Region2D::Region2D(const pcl::PointXYZ &mid_point1, const pcl::PointXYZ &mid_point2, double width) {
-    this->width = width;
-    depth = mid_point2.y - mid_point1.y;
-    pcl::PointXYZ P1(mid_point1.x - (width/2.0), mid_point1.y, 0),
-        P4(P1.x + this->width, P1.y + depth, 0);
-    this->P1 = P1;
-    this->P4 = P4;
+Region2D::Region2D(const pcl::PointXYZ &mid_point1, const pcl::PointXYZ &mid_point2, const pcl::PointXYZ &angle_ref, double width) {
+    Eigen::Vector3f mid_1_vec = mid_point1.getVector3fMap(), angle_ref_vec = angle_ref.getVector3fMap();
+    width_vec = mid_1_vec - angle_ref_vec;
+    if(width_vec.norm() < 0)
+        width_vec *= -1;
+    width_vec.normalize();
+    width_vec *= width / 2.0;
+    depth_vec = mid_point2.getVector3fMap() - mid_point1.getVector3fMap();
+    Eigen::Vector3f P1_vec(mid_1_vec - width_vec), P4_vec(mid_point2.getVector3fMap() + width_vec);
 
+    P1 = {P1_vec(0), P1_vec(1), P1_vec(2)};
+    P4 = {P4_vec(0), P4_vec(1), P4_vec(2)};
+    if(P1.x < P4.x) {
+        xmin = P1.x;
+        xmax = P4.x;
+    }
+    else {
+        xmin = P4.x;
+        xmax = P1.x;
+    }
+
+    if (P1.y < P4.y) {
+        ymin = P1.y;
+        ymax = P4.y;
+    }
+    else {
+        ymin = P4.y;
+        ymax = P1.y;
+    }
 }
 
 bool Region2D::ChechIfPointInRegion(const pcl::PointXYZ point) {
-    if ((point.x >= P1.x && point.x <= P4.x) && (point.y >= P1.y && point.y <= P4.y))
+    if ((point.x >= xmin && point.x <= xmax) && (point.y >= ymin && point.y <= ymax))
         return true;
     else
         return false;
