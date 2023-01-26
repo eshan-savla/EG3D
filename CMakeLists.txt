@@ -21,10 +21,15 @@ set(hdrs
     "include/BoundingBox.h"
     "include/Region2D.h"
     "include/EdgeCloud.h")
+
 add_library(eg3d STATIC ${src} ${hdrs})
 target_include_directories(eg3d PRIVATE ${PROJECT_SOURCE_DIR}/include)
 target_link_libraries(eg3d PRIVATE ${PCL_LIBRARIES} PRIVATE OpenMP::OpenMP_CXX)
 
-add_executable(EG3D src/main.cpp)
-target_include_directories(EG3D PRIVATE ${PROJECT_SOURCE_DIR}/include ${PROJECT_BINARY_DIR})
-target_link_libraries(EG3D PRIVATE eg3d PRIVATE ${PCL_LIBRARIES} PRIVATE OpenMP::OpenMP_CXX)
+add_executable(segmenter src/main.cpp)
+target_include_directories(segmenter PRIVATE ${PROJECT_SOURCE_DIR}/include ${PROJECT_BINARY_DIR})
+target_link_libraries(segmenter PRIVATE eg3d PRIVATE ${PCL_LIBRARIES} PRIVATE OpenMP::OpenMP_CXX)
+set_target_properties(eg3d PROPERTIES PUBLIC_HEADER "${hdrs}")
+install(TARGETS eg3d LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" CONFIGURATIONS Debug PERMISSIONS WORLD_READ WORLD_WRITE WORLD_EXECUTE PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_PREFIX}/include")
+#install(TARGETS eg3d LIBRARY DESTINATION "~/TestEG3D/src/testeg3d/dependencies/lib" CONFIGURATIONS Debug PERMISSIONS WORLD_READ WORLD_WRITE WORLD_EXECUTE PUBLIC_HEADER DESTINATION "~/TestEG3D/src/testeg3d/dependencies/include")
+#install(FILES "${hdrs}" INCLUDES DESTINATION "${CMAKE_INSTALL_PREFIX}/include")  # ~/TestEG3D/src/testeg3d/dependencies
