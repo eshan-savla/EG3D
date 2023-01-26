@@ -31,11 +31,13 @@ private:
     std::vector<unsigned int> num_pts_in_segment;
     std::vector<int> point_labels;
     std::vector<int> previous_seeds;
+    std::vector<bool> false_edges;
 
     float seg_tag_thresh;
     int total_num_of_segmented_pts;
     int total_num_of_segments;
     unsigned int previous_size;
+    unsigned int false_points_previous;
     float angle_thresh;
     bool is_appended;
     bool override_cont;
@@ -44,7 +46,7 @@ private:
     std::unordered_map<unsigned long, Eigen::Vector3f> vectors_map;
     std::unordered_map<int, Eigen::Vector3f> segment_vectors;
     std::unordered_map<int, bool> finished_segments;
-    std::unordered_map<unsigned long, bool> false_edges;
+//    std::unordered_map<unsigned long, bool> false_edges;
 
     Eigen::Vector3f scan_direction;
 
