@@ -48,7 +48,7 @@ void BaseCloud::ExtractIndices(const std::vector<int> &indices, pcl::PointCloud<
     extractor.filter(*cloud);
 }
 
-bool BaseCloud::InInliers(unsigned long &origin, std::vector<int> &global_inliers) {
+bool BaseCloud::InInliers(unsigned long origin, std::vector<int> &global_inliers) {
     if (global_inliers.empty()) return false;
     if (std::find(global_inliers.begin(), global_inliers.end(), origin) != global_inliers.end())
         return true;
