@@ -27,6 +27,8 @@ private:
     std::vector<int> edge_points_indices;
     pcl::PointCloud<pcl::PointXYZ>::Ptr new_points;
     pcl::search::Search<pcl::PointXYZ>::Ptr tree;
+    std::vector<pcl::Indices> neighbours_map;
+    std::vector<Eigen::Vector3f> vectors_map;
     std::vector<std::vector<int>> clusters;
     std::vector<unsigned int> num_pts_in_segment;
     std::vector<int> point_labels;
@@ -42,11 +44,8 @@ private:
     bool is_appended;
     bool override_cont;
 
-    std::unordered_map<unsigned long, pcl::Indices> neighbours_map;
-    std::unordered_map<unsigned long, Eigen::Vector3f> vectors_map;
     std::unordered_map<int, Eigen::Vector3f> segment_vectors;
     std::unordered_map<int, bool> finished_segments;
-//    std::unordered_map<unsigned long, bool> false_edges;
 
     Eigen::Vector3f scan_direction;
 

@@ -14,7 +14,7 @@ EdgeCloud::EdgeCloud() : new_points(new pcl::PointCloud<pcl::PointXYZ>), tree(ne
 
 EdgeCloud::EdgeCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud) {
     Init();
-    LoadInCloud(cloud);
+    AddPoints(cloud);
 }
 
 EdgeCloud::EdgeCloud(const std::vector<int> &edge_indices, const pcl::PointCloud<pcl::PointXYZ>::Ptr &parent_cloud) :
@@ -40,23 +40,30 @@ void EdgeCloud::ComputeVectors(const int &neighbours_K, const float &dist_thresh
     this->override_cont = override;
     pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
     kdtree.setInputCloud(cloud_data);
-    int initial = previous_size;
+    unsigned int initial = previous_size;
+    unsigned int new_size = new_points->size();
+    std::vector<pcl::Indices> neighbours_map_new(new_size);
+    neighbours_map.insert(neighbours_map.end(), neighbours_map_new.begin(), neighbours_map_new.end());
+    Eigen::Vector3f zero_vec;
+    zero_vec.setZero();
+    std::vector<Eigen::Vector3f> vectors_map_new(new_points->size(), zero_vec);
+    vectors_map.insert(vectors_map.end(), vectors_map_new.begin(), vectors_map_new.end());
     // if(is_appended && !override_cont)
     //     initial = previous_size;
     // else
     //     initial = 0;
-// #pragma omp parallel default(none) shared(neighbours_K, dist_thresh, neighbours_map, vectors_map, kdtree, initial)
-//     {
+ #pragma omp parallel default(none) shared(neighbours_K, dist_thresh, neighbours_map, vectors_map, kdtree, initial)
+     {
 //         std::unordered_map<int, pcl::Indices> neighbours_map_thr;
 //         std::unordered_map<int, Eigen::Vector3f> vectors_map_thr;
-// #pragma omp for nowait
+ #pragma omp for nowait
         for (std::size_t point_index = initial; point_index < cloud_data->size(); ++point_index) {
             std::vector<int> neighbour_ids;
             std::vector<float> squared_distances;
             neighbour_ids.clear();
             squared_distances.clear();
 //        pcl::PointXYZ origin = cloud_data->at(point_index);
-            kdtree.nearestKSearch(point_index, neighbours_K, neighbour_ids, squared_distances);
+            kdtree.nearestKSearch(static_cast<int>(point_index), neighbours_K, neighbour_ids, squared_distances);
             pcl::PointCloud<pcl::PointXYZ>::Ptr neighbours_cloud(new pcl::PointCloud<pcl::PointXYZ>);
             std::vector<int> local_inliers, global_inliers;
             bool point_in_inliers = false;
@@ -80,8 +87,8 @@ void EdgeCloud::ComputeVectors(const int &neighbours_K, const float &dist_thresh
                                                                  cloud_data->at(global_inliers.back())};
                         Eigen::Vector3f direction_vector;
                         CreateVector(first_last.front(), first_last.back(), direction_vector);
-                        vectors_map[point_index] = direction_vector;
-                        neighbours_map[point_index] = global_inliers;
+                        vectors_map.at(point_index) = direction_vector;
+                        neighbours_map.at(point_index) = global_inliers;
                     }
                 } else {
                     for (int i = int(local_inliers.size()) - 1; i >= 0; i--) {
@@ -104,7 +111,7 @@ void EdgeCloud::ComputeVectors(const int &neighbours_K, const float &dist_thresh
 // #pragma omp critical
 //         neighbours_map.insert(neighbours_map_thr.begin(), neighbours_map_thr.end());
 //         vectors_map.insert(vectors_map_thr.begin(), vectors_map_thr.end());
-//     }
+     }
     int b = 0;
 }
 
@@ -343,8 +350,8 @@ void EdgeCloud::CreateColouredCloud(const std::string &path) {
             point.y = (i_point.y);
             point.z = (i_point.z);
             point.r = 255;
-            point.g = 255;
-            point.b = 255;
+            point.g = 0;
+            point.b = 0;
             coloured_cloud->push_back(point);
         }
 
@@ -364,10 +371,10 @@ void EdgeCloud::CreateColouredCloud(const std::string &path) {
 }
 
 void EdgeCloud::AddPoints(const pcl::PointCloud<pcl::PointXYZ>::Ptr &new_points) {
+    this->new_points = new_points;
     if (cloud_data->empty())
         LoadInCloud(new_points);
     else {
-        this->new_points = new_points;
         previous_size = cloud_data->size();
         *cloud_data += *new_points;
         is_appended = true;
@@ -420,9 +427,11 @@ void EdgeCloud::RemoveFalseEdges(float region_width) {
     for (std::size_t point_index = previous_size; point_index < cloud_data->size(); ++point_index) {
         if (is_appended) /* && std::cos(std::abs(scan_direction.dot(vectors_map.at(point_index)) /
                 (scan_direction.norm() * vectors_map.at(point_index).norm()))) <= seg_tag_thresh */
-            false_edges.insert(false_edges.begin() + point_index, ((false_region_1.ChechIfPointInRegion(cloud_data->at(point_index)) || false_region_2.ChechIfPointInRegion(cloud_data->at(point_index))) ));
+            false_edges.insert(false_edges.begin() + point_index, ((false_region_1.ChechIfPointInRegion(cloud_data->at(point_index)) || false_region_2.ChechIfPointInRegion(cloud_data->at(point_index))) && std::cos(std::abs(scan_direction.dot(vectors_map.at(point_index)) /
+                (scan_direction.norm() * vectors_map.at(point_index).norm()))) <= seg_tag_thresh));
         else
-            false_edges.insert(false_edges.begin() + point_index, (false_region_1.ChechIfPointInRegion(cloud_data->at(point_index)) ));
+            false_edges.insert(false_edges.begin() + point_index, (false_region_1.ChechIfPointInRegion(cloud_data->at(point_index)) && std::cos(std::abs(scan_direction.dot(vectors_map.at(point_index)) /
+                (scan_direction.norm() * vectors_map.at(point_index).norm()))) <= seg_tag_thresh));
     }
 //
 //   int size_t = 0, size_f = 0, size_c = cloud_data->size();
