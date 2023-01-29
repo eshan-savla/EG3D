@@ -303,6 +303,7 @@ void EdgeCloud::AssembleRegions() {
     const auto num_of_segs_check = total_num_of_segments;
     const long no_of_unseg = std::count(point_labels.begin(), point_labels.end(), -1);
 
+
     std::vector<int> segment;
     clusters.clear();
     clusters.resize(num_of_segs, segment);
@@ -421,16 +422,16 @@ void EdgeCloud::RemoveFalseEdges(float region_width) {
     BoundingBox b_box(cloud_section);
     pcl::PointXYZ box_points[8];
     b_box.GetPoints(box_points);
-    Region2D false_region_1(box_points[6], box_points[7], box_points[4], region_width);
-    Region2D false_region_2(box_points[4], box_points[5], box_points[6], region_width);
+    Region2D false_region_1(box_points[6], box_points[7], scan_direction, region_width);
+    Region2D false_region_2(box_points[4], box_points[5], scan_direction, region_width);
 
     for (std::size_t point_index = previous_size; point_index < cloud_data->size(); ++point_index) {
-        if (is_appended) /* && std::cos(std::abs(scan_direction.dot(vectors_map.at(point_index)) /
+        if (is_appended) /* && (std::abs(scan_direction.dot(vectors_map.at(point_index)) /
                 (scan_direction.norm() * vectors_map.at(point_index).norm()))) <= seg_tag_thresh */
-            false_edges.insert(false_edges.begin() + point_index, ((false_region_1.ChechIfPointInRegion(cloud_data->at(point_index)) || false_region_2.ChechIfPointInRegion(cloud_data->at(point_index))) && std::cos(std::abs(scan_direction.dot(vectors_map.at(point_index)) /
+            false_edges.insert(false_edges.begin() + point_index, ((false_region_1.ChechIfPointInRegion(cloud_data->at(point_index)) || false_region_2.ChechIfPointInRegion(cloud_data->at(point_index))) && (std::abs(scan_direction.dot(vectors_map.at(point_index)) /
                 (scan_direction.norm() * vectors_map.at(point_index).norm()))) <= seg_tag_thresh));
         else
-            false_edges.insert(false_edges.begin() + point_index, (false_region_1.ChechIfPointInRegion(cloud_data->at(point_index)) && std::cos(std::abs(scan_direction.dot(vectors_map.at(point_index)) /
+            false_edges.insert(false_edges.begin() + point_index, (false_region_1.ChechIfPointInRegion(cloud_data->at(point_index)) && (std::abs(scan_direction.dot(vectors_map.at(point_index)) /
                 (scan_direction.norm() * vectors_map.at(point_index).norm()))) <= seg_tag_thresh));
     }
 //
