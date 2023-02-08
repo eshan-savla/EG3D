@@ -62,3 +62,38 @@ pcl::PointCloud<pcl::PointXYZ> BaseCloud::GetCloud() {
     return *out_cloud;
 }
 
+void BaseCloud::StatOutlierRemoval(const int MeanK, const float StddevMulThresh) {
+    pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
+    sor.setInputCloud(cloud_data);
+    sor.setMeanK(MeanK);
+    sor.setStddevMulThresh(StddevMulThresh);
+    sor.filter(*cloud_data);
+}
+
+void BaseCloud::StatOutlierRemoval(const int MeanK, const float StddevMulThresh, std::string &out_path) {
+    StatOutlierRemoval(MeanK, StddevMulThresh);
+    pcl::io::savePCDFileASCII(out_path, *cloud_data);
+}
+
+void BaseCloud::RadOutlierRemoval(const float Radius, const int MinNeighbours) {
+    pcl::RadiusOutlierRemoval<pcl::PointXYZ> ror;
+    ror.setInputCloud(cloud_data);
+    ror.setRadiusSearch(Radius);
+    ror.setMinNeighborsInRadius(MinNeighbours);
+    ror.filter(*cloud_data);
+}
+
+void BaseCloud::RadOutlierRemoval(const float Radius, const int MinNeighbours, std::string &out_path) {
+    RadOutlierRemoval(Radius, MinNeighbours);
+    pcl::io::savePCDFileASCII(out_path, *cloud_data);}
+
+void BaseCloud::VoxelDownSample(const float &leaf_size) {
+    VoxelDownSample_(cloud_data, leaf_size);
+}
+
+void BaseCloud::VoxelDownSample_(pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud, const float &leaf_size) {
+    pcl::VoxelGrid<pcl::PointXYZ> vg_sampler;
+    vg_sampler.setInputCloud(cloud);
+    vg_sampler.setLeafSize(leaf_size, leaf_size, leaf_size);
+    vg_sampler.filter(*cloud);
+}
