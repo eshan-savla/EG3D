@@ -29,14 +29,13 @@ void
 EdgeCloud::SegmentEdges(const int &neighbours_K, const float &dist_thresh, const float &angle_thresh, const bool &sort,
                         const bool &override_cont) {
 
-    ComputeVectors(neighbours_K, dist_thresh, override_cont);
+    ComputeVectors(neighbours_K, dist_thresh, 0, override_cont);
     ApplyRegionGrowing(neighbours_K, angle_thresh, sort);
     AssembleRegions();
     std::cout << "Found " << num_pts_in_segment.size() << " segments." << std::endl;
 }
 
-void EdgeCloud::ComputeVectors(const int &neighbours_K, const float &dist_thresh, const bool &override) {
-
+void EdgeCloud::ComputeVectors(const int &neighbours_K, const float &dist_thresh, const int &repeated_indexes_count, const bool &override) {
     this->override_cont = override;
     pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
     kdtree.setInputCloud(cloud_data);
@@ -48,22 +47,19 @@ void EdgeCloud::ComputeVectors(const int &neighbours_K, const float &dist_thresh
     zero_vec.setZero();
     std::vector<Eigen::Vector3f> vectors_map_new(new_points->size(), zero_vec);
     vectors_map.insert(vectors_map.end(), vectors_map_new.begin(), vectors_map_new.end());
-    // if(is_appended && !override_cont)
-    //     initial = previous_size;
-    // else
-    //     initial = 0;
- #pragma omp parallel default(none) shared(neighbours_K, dist_thresh, neighbours_map, vectors_map, kdtree, initial)
-     {
-//         std::unordered_map<int, pcl::Indices> neighbours_map_thr;
-//         std::unordered_map<int, Eigen::Vector3f> vectors_map_thr;
- #pragma omp for nowait
+
+#pragma omp parallel default(none) shared(neighbours_K, dist_thresh, neighbours_map, vectors_map, kdtree, initial, repeated_indexes_count)
+    {
+#pragma omp for nowait
         for (std::size_t point_index = initial; point_index < cloud_data->size(); ++point_index) {
             std::vector<int> neighbour_ids;
             std::vector<float> squared_distances;
             neighbour_ids.clear();
             squared_distances.clear();
-//        pcl::PointXYZ origin = cloud_data->at(point_index);
-            kdtree.nearestKSearch(static_cast<int>(point_index), neighbours_K, neighbour_ids, squared_distances);
+            if (is_appended && (point_index <= (initial + repeated_indexes_count)))
+                SpecialKNeighboursSearch(static_cast<int>(point_index), neighbours_K, neighbour_ids, squared_distances);
+            else
+                kdtree.nearestKSearch(static_cast<int>(point_index), neighbours_K, neighbour_ids, squared_distances);
             pcl::PointCloud<pcl::PointXYZ>::Ptr neighbours_cloud(new pcl::PointCloud<pcl::PointXYZ>);
             std::vector<int> local_inliers, global_inliers;
             bool point_in_inliers = false;
@@ -97,22 +93,35 @@ void EdgeCloud::ComputeVectors(const int &neighbours_K, const float &dist_thresh
                         int inlier = local_inliers[i];
                         neighbour_ids.erase(neighbour_ids.begin() + inlier);
                     }
-                    // if (neighbour_ids.size() <= 1) {
-                    //     point_in_inliers = true;
-                    //     neighbours_map_thr[point_index] = global_inliers;
-                    //     Eigen::Vector3f zero_vec;
-                    //     zero_vec.setZero();
-                    //     vectors_map_thr[point_index] = zero_vec;
-                    // }
                 }
 
             }
         }
-// #pragma omp critical
-//         neighbours_map.insert(neighbours_map_thr.begin(), neighbours_map_thr.end());
-//         vectors_map.insert(vectors_map_thr.begin(), vectors_map_thr.end());
-     }
+    }
     int b = 0;
+}
+
+void
+EdgeCloud::SpecialKNeighboursSearch(const size_t &point_index, const int neighbours_k, std::vector<int> &neighbours_id,
+                                    std::vector<float> &neighbours_dist) {
+    pcl::KdTreeFLANN<pcl::PointXYZ> kdtree_prev;
+    int si = point_index - previous_size + previous_sizes.at(previous_sizes.size() - 1) + previous_sizes.size() - 2;
+    std::vector<int> inds_vec(si);
+    std::iota(inds_vec.begin(), inds_vec.end(), previous_sizes.at(previous_sizes.size() - 2) - (point_index - previous_size));
+    inds_vec.push_back(point_index);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr sub_cloud (new pcl::PointCloud<pcl::PointXYZ>);
+    ExtractIndices(inds_vec, sub_cloud);
+    auto new_index = std::find(inds_vec.begin(), inds_vec.end(), (point_index));
+    int new_point_index = new_index - inds_vec.begin();
+    // pcl::IndicesConstPtr inds (new pcl::Indices(inds_vec));
+    kdtree_prev.setInputCloud(sub_cloud);
+    std::vector<int> neighbours_id_sub;
+    kdtree_prev.nearestKSearch(static_cast<int>(new_point_index), neighbours_k, neighbours_id_sub, neighbours_dist);
+    neighbours_id.resize(neighbours_id_sub.size());
+    for (size_t i = 0; i < neighbours_id_sub.size(); i++)
+    {
+        neighbours_id.at(i) = inds_vec.at(neighbours_id_sub.at(i));
+    }
 }
 
 /// @brief 
@@ -302,6 +311,7 @@ void EdgeCloud::AssembleRegions() {
     const auto num_of_pts = cloud_data->size();
     const auto num_of_segs_check = total_num_of_segments;
     const long no_of_unseg = std::count(point_labels.begin(), point_labels.end(), -1);
+    std::cout << "No. of segs: " << num_of_segs << "check: " << num_of_segs_check << std::endl;
 
 
     std::vector<int> segment;
@@ -373,10 +383,16 @@ void EdgeCloud::CreateColouredCloud(const std::string &path) {
 
 void EdgeCloud::AddPoints(const pcl::PointCloud<pcl::PointXYZ>::Ptr &new_points) {
     this->new_points = new_points;
-    if (cloud_data->empty())
+    new_points->is_dense = true;
+    // if (downsample)
+        // VoxelDownSample_(this->new_points, leaf_size);
+    if (cloud_data->empty()) {
         LoadInCloud(new_points);
+        previous_sizes.push_back(0);
+    }
     else {
         previous_size = cloud_data->size();
+        previous_sizes.push_back(previous_size - previous_sizes.at(previous_sizes.size() - 1));
         *cloud_data += *new_points;
         is_appended = true;
     }
@@ -388,7 +404,6 @@ bool EdgeCloud::IsFinished(const int &label) {
         throw std::invalid_argument("Scan direction vector was not provided");
     Eigen::Vector3f seg_direction = segment_vectors.at(label);
     float angle_btw = std::abs(scan_direction.dot(seg_direction))/(scan_direction.norm() * seg_direction.norm());
-    // PCL_INFO("Angle between: %f ", std::acos(angle_btw));
     return (angle_btw > seg_tag_thresh);
 }
 
@@ -405,44 +420,75 @@ void EdgeCloud::Init() {
     total_num_of_segmented_pts = 0;
     false_points_previous = 0;
     is_appended = false;
+    override_cont = false;
+    cloud_data->is_dense = true;
     previous_size = 0;
     seg_tag_thresh = std::cos(85.0 / 180.0 * M_PI);
     scan_direction.setZero();
+    SetSensorSpecs(0.0, 0.0, 0.0);
 }
 
-void EdgeCloud::RemoveFalseEdges(float region_width) {
+void EdgeCloud::RemoveFalseEdges(float region_width, bool use_coords) {
     false_points_previous = std::count(false_edges.begin(), false_edges.end(), true);
     std::vector<bool> false_edges_new(new_points->size(), false);
     false_edges.insert(false_edges.end(), false_edges_new.begin(), false_edges_new.end()); //resize vector
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_section (new pcl::PointCloud<pcl::PointXYZ>);
-    if (is_appended)
-        cloud_section = new_points;
-    else
-        cloud_section = cloud_data;
-    BoundingBox b_box(cloud_section);
-    pcl::PointXYZ box_points[8];
-    b_box.GetPoints(box_points);
-    Region2D false_region_1(box_points[6], box_points[7], scan_direction, region_width);
-    Region2D false_region_2(box_points[4], box_points[5], scan_direction, region_width);
-
-    for (std::size_t point_index = previous_size; point_index < cloud_data->size(); ++point_index) {
-        if (is_appended) /* && (std::abs(scan_direction.dot(vectors_map.at(point_index)) /
-                (scan_direction.norm() * vectors_map.at(point_index).norm()))) <= seg_tag_thresh */
-            false_edges.insert(false_edges.begin() + point_index, ((false_region_1.ChechIfPointInRegion(cloud_data->at(point_index)) || false_region_2.ChechIfPointInRegion(cloud_data->at(point_index))) && (std::abs(scan_direction.dot(vectors_map.at(point_index)) /
-                (scan_direction.norm() * vectors_map.at(point_index).norm()))) <= seg_tag_thresh));
-        else
-            false_edges.insert(false_edges.begin() + point_index, (false_region_1.ChechIfPointInRegion(cloud_data->at(point_index)) && (std::abs(scan_direction.dot(vectors_map.at(point_index)) /
-                (scan_direction.norm() * vectors_map.at(point_index).norm()))) <= seg_tag_thresh));
+    BBBase* b_box;
+    if (use_coords) {
+        b_box = new BBSensorPos(coords_first, coords_last, sensorSpecs, region_width);
+        pcl::PointXYZ box_points[4];
+        b_box->GetPoints(box_points);
+        int y = 0;
     }
-//
-//   int size_t = 0, size_f = 0, size_c = cloud_data->size();
-//   for(const std::pair<unsigned long, bool> &val:false_edges) {
-//        if (val.second)
-//           size_t++;
-//        else
-//            size_f++;
-//   }
-//   bool check = (size_t + size_f) == size_c;
-//    int b = 0;
+    else {
+        if (is_appended)
+            cloud_section = new_points;
+        else
+            cloud_section = cloud_data;
+        b_box = new BBCloudSection(cloud_section, scan_direction, region_width);
+        pcl::PointXYZ box_points[8];
+        b_box->GetPoints(box_points);
+    }
+    for (std::size_t point_index = previous_size; point_index < cloud_data->size(); ++point_index) {
+//        bool angle_check = (std::abs(scan_direction.dot(vectors_map.at(point_index)) /
+//                                     (scan_direction.norm() * vectors_map.at(point_index).norm()))) <= seg_tag_thresh;
+        bool angle_check = true;
+        if (is_appended){
+            bool is_false_edge = (b_box->CheckIfPointInFirstRegion(cloud_data->at(point_index)) || b_box->CheckIfPointInLastRegion(cloud_data->at(point_index))) && angle_check;
+            false_edges.at(point_index) = is_false_edge;
+        }
+        else{
+            bool is_false_edge = b_box->CheckIfPointInLastRegion(cloud_data->at(point_index)) && angle_check;
+            false_edges.at(point_index) = is_false_edge;
+        }
+    }
+}
+
+void EdgeCloud::SetSensorSpecs(float width, float depth, float height) {
+    sensorSpecs.width = width;
+    sensorSpecs.depth = depth;
+    sensorSpecs.height = height;
+}
+
+void
+EdgeCloud::SetSensorCoords(const std::vector<float> xAxis, const std::vector<float> yAxis, const std::vector<float> zAxis, const std::vector<float> sensorPos, const std::string& section) {
+    Eigen::Vector3f x_axis(xAxis.data()), y_axis(yAxis.data()), z_axis(zAxis.data()), sensor_pos(sensorPos.data());
+    if (section == "first")  {
+        coords_first.x_axis = x_axis;
+        coords_first.y_axis = y_axis;
+        coords_first.z_axis = z_axis;
+        coords_first.sensor_position = sensor_pos;
+    }
+    else if (section == "last") {
+        coords_last.x_axis = x_axis;
+        coords_last.y_axis = y_axis;
+        coords_last.z_axis = z_axis;
+        coords_last.sensor_position = sensor_pos;
+    }
+}
+
+void EdgeCloud::SetDownsampling(bool activate, float leaf_size) {
+    downsample = activate;
+    this->leaf_size = leaf_size;
 }
 

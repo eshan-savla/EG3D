@@ -9,6 +9,7 @@
 #include "BaseCloud.h"
 #include "BoundingBox.h"
 #include "Region2D.h"
+#include "SensorInfo.h"
 
 
 #include <pcl/features/normal_3d_omp.h>
@@ -34,15 +35,22 @@ private:
     std::vector<int> point_labels;
     std::vector<int> previous_seeds;
     std::vector<bool> false_edges;
+    std::vector<unsigned int> previous_sizes;
+    SensorSpecs sensorSpecs;
+    SensorCoords coords_first, coords_last;
 
     float seg_tag_thresh;
     int total_num_of_segmented_pts;
     int total_num_of_segments;
     unsigned int previous_size;
+    unsigned int first_point_index;
     unsigned int false_points_previous;
+//    int repeated_indexes_count;
     float angle_thresh;
     bool is_appended;
     bool override_cont;
+    bool downsample;
+    float leaf_size;
 
     std::unordered_map<int, Eigen::Vector3f> segment_vectors;
     std::unordered_map<int, bool> finished_segments;
@@ -57,22 +65,26 @@ private:
     int ExtendSegment(const int &new_point, const int &neighbour, const int &segment_id, const int &neighbours_k,
                       Eigen::Vector3f &segment_vector);
     bool IsFinished(const int &label);
-
+    void SpecialKNeighboursSearch(const std::size_t &point_index, const int neighbours_k, std::vector<int> &neighbours_id, std::vector<float> &neighbours_dist);
 public:
     EdgeCloud();
     EdgeCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud);
     EdgeCloud(const std::vector<int> &edge_indices, const pcl::PointCloud<pcl::PointXYZ>::Ptr& parent_cloud);
 
+    void SetDownsampling(bool activate, float leaf_size);
+
     void SegmentEdges(const int &neighbours_K, const float &dist_thresh, const float &angle_thresh, const bool &sort,
                       const bool &override_cont);
-    void ComputeVectors(const int &neighbours_K, const float &dist_thresh, const bool &override);
-    void RemoveFalseEdges(float region_width);
+    void ComputeVectors(const int &neighbours_K, const float &dist_thresh, const int &repeated_indexes_count, const bool &override);
+    void RemoveFalseEdges(float region_width, bool use_coords);
     void
     ApplyRegionGrowing(const int &neighbours_k, const float &angle_thresh, const bool &sort);
     void CreateColouredCloud(const std::string &path);
     void AddPoints(const pcl::PointCloud<pcl::PointXYZ>::Ptr &new_points);
     void SetTagThresh(const float &seg_tag_thresh);
     void SetScanDirection(const Eigen::Vector3f &scan_direction);
+    void SetSensorSpecs(float width, float depth, float height);
+    void SetSensorCoords(std::vector<float> xAxis, std::vector<float> yAxis, std::vector<float> zAxis, std::vector<float> sensorPos, const std::string& section);
     void AssembleRegions();
 
 };
