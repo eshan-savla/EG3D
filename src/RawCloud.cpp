@@ -6,11 +6,17 @@
 #include <cmath>
 #include <vector>
 #include <random>
+#include <unordered_map>
+
 #include "EdgeCloud.h"
 
 
 RawCloud::RawCloud() : BaseCloud() {
     is_filtered = false;
+    remove_first = false;
+    remove_last = false;
+    first_ind.resize(0);
+    last_ind.resize(0);
 }
 
 void RawCloud::GenerateCloud(const int &pcl_size) {
@@ -36,48 +42,6 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr RawCloud::GetCloud() {
     return cloud_data;
 }
 
-void RawCloud::VoxelDownSample(const float &leaf_size) {
-    pcl::VoxelGrid<pcl::PointXYZ> vg_sampler;
-    vg_sampler.setInputCloud(cloud_data);
-    vg_sampler.setLeafSize(leaf_size, leaf_size, leaf_size);
-    vg_sampler.filter(*cloud_data);
-    is_filtered = true;
-}
-unsigned int RawCloud::StatOutlierRemoval(const int MeanK, const float StddevMulThresh) {
-    if (count_before != GetCount()) count_before = GetCount();
-    pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
-    sor.setInputCloud(cloud_data);
-    sor.setMeanK(MeanK);
-    sor.setStddevMulThresh(StddevMulThresh);
-    sor.filter(*cloud_data);
-    is_filtered = true;
-    count_after = GetCount();
-    return count_before - count_after;
-}
-
-unsigned int RawCloud::StatOutlierRemoval(const int MeanK, const float StddevMulThresh, std::string &out_path) {
-    unsigned int diff = StatOutlierRemoval(MeanK, StddevMulThresh);
-    pcl::io::savePCDFileASCII(out_path, *cloud_data);
-    return diff;
-}
-
-unsigned int RawCloud::RadOutlierRemoval(const float Radius, const int MinNeighbours) {
-    if (count_before != GetCount()) count_before = GetCount();
-    pcl::RadiusOutlierRemoval<pcl::PointXYZ> ror;
-    ror.setInputCloud(cloud_data);
-    ror.setRadiusSearch(Radius);
-    ror.setMinNeighborsInRadius(MinNeighbours);
-    ror.filter(*cloud_data);
-    is_filtered = true;
-    count_after = GetCount();
-    return count_before - count_after;
-}
-
-unsigned int RawCloud::RadOutlierRemoval(const float Radius, const int MinNeighbours, std::string &out_path) {
-    unsigned int diff = RadOutlierRemoval(Radius, MinNeighbours);
-    pcl::io::savePCDFileASCII(out_path, *cloud_data);
-    return diff;
-}
 
 pcl::PointCloud<pcl::PointXYZ> RawCloud::FindEdgePoints(const int no_neighbours, const double angular_thresh_rads,
                                                         const float dist_thresh, const float radius,
@@ -120,6 +84,8 @@ pcl::PointCloud<pcl::PointXYZ> RawCloud::FindEdgePoints(const int no_neighbours,
 #pragma omp critical
         edge_points_global.insert(edge_points_global.end(), edge_points_thread.begin(), edge_points_thread.end());
     }
+    if (remove_first || remove_last)
+        RemoveFalseEdges(edge_points_global);
     pcl::PointCloud<pcl::PointXYZ> return_cloud;
     pcl::copyPointCloud(*cloud_data, edge_points_global, return_cloud);
     return return_cloud;
@@ -195,5 +161,43 @@ double RawCloud::ComputeAngularGap(const pcl::PointXYZ &origin, pcl::PointCloud<
 
         return *std::max_element(deltas.begin(), deltas.end());
     }
+}
+
+void RawCloud::RemoveFalseEdges(std::vector<int> &edge_point_indices) {
+    std::sort(edge_point_indices.begin(), edge_point_indices.end());
+    std::unordered_map<std::size_t , std::size_t> index_lookup;
+    for (int i = 0; i < edge_point_indices.size(); ++i) {
+        index_lookup[edge_point_indices.at(i)] = i;
+    }
+    if (remove_last && !last_ind.empty()) {
+        for (int i = static_cast<int>(last_ind.size() - 1); i >= 0 ; i--) {
+            if (index_lookup.find(last_ind.at(i)) != index_lookup.end()) {
+                std::size_t ind = index_lookup.at(last_ind.at(i));
+                edge_point_indices.erase(edge_point_indices.begin() + ind);
+            }
+        }
+    }
+
+    if (remove_first && !first_ind.empty()) {
+        for (int i = static_cast<int>(first_ind.size() - 1); i >= 0 ; i--) {
+            if (index_lookup.find(first_ind.at(i)) != index_lookup.end()) {
+                std::size_t ind = index_lookup.at(first_ind.at(i));
+                edge_point_indices.erase(edge_point_indices.begin() + ind);
+            }
+        }
+    }
+}
+
+void RawCloud::SetFirstInd(const std::vector<std::size_t> &first_ind) {
+    this->first_ind = first_ind;
+}
+
+void RawCloud::SetLastInd(const std::vector<std::size_t> &last_ind) {
+    this->last_ind = last_ind;
+}
+
+void RawCloud::SetFilterCriteria(bool remove_first, bool remove_last) {
+    this->remove_first = remove_first;
+    this->remove_last = remove_last;
 }
 
