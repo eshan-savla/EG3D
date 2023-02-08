@@ -17,6 +17,7 @@ private:
 public:
     Region2D(const pcl::PointXYZ& mid_point_bottom, const pcl::PointXYZ& mid_point_top, Eigen::Vector3f width_vec, double width);
     bool ChechIfPointInRegion(const pcl::PointXYZ point);
+    void GetPoints(float* x_val, float* y_val);
 };
 
 
