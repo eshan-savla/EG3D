@@ -27,9 +27,11 @@ class EdgeCloud : public BaseCloud{
 private:
     std::vector<int> edge_points_indices;
     pcl::PointCloud<pcl::PointXYZ>::Ptr new_points;
-    pcl::search::Search<pcl::PointXYZ>::Ptr tree;
+//    pcl::search::Search<pcl::PointXYZ>::Ptr tree;
     std::vector<pcl::Indices> neighbours_map;
     std::vector<Eigen::Vector3f> vectors_map;
+    std::vector<bool> reused_indices_map;
+    std::vector<int> reused_inds_start, reused_inds_end, reused_inds_prev;
     std::vector<std::vector<int>> clusters;
     std::vector<unsigned int> num_pts_in_segment;
     std::vector<int> point_labels;
@@ -40,6 +42,7 @@ private:
     SensorCoords coords_first, coords_last;
 
     float seg_tag_thresh;
+    float bef_aft_ratio;
     int total_num_of_segmented_pts;
     int total_num_of_segments;
     unsigned int previous_size;
@@ -51,31 +54,44 @@ private:
     bool override_cont;
     bool downsample;
     float leaf_size;
+    bool outrem;
+    int MeanK;
+    float StddevMulThresh;
 
     std::unordered_map<int, Eigen::Vector3f> segment_vectors;
     std::unordered_map<int, bool> finished_segments;
-
+    std::unordered_map<int, int> segment_seed_map;
     Eigen::Vector3f scan_direction;
+
+    struct Segment {
+        int segment_id;
+        int origin_seed, last_point;
+        Eigen::Vector3f origin_seed_dir, segment_dir;
+
+    };
 
     void Init();
 
-    int GrowSegment(const int &initial_seed, const int &segment_id, const int &neighbours_k,
-                    Eigen::Vector3f &segment_vector);
+    int GrowSegment(const int &initial_seed, const int &segment_id, const int &neighbours_k, bool use_original = false);
     bool CheckPoint(const int &current_seed, const int &neighbour, bool &is_a_seed);
-    int ExtendSegment(const int &new_point, const int &neighbour, const int &segment_id, const int &neighbours_k,
-                      Eigen::Vector3f &segment_vector);
+    void ShiftIndices(std::vector<int> &indices);
+    int ExtendSegments(const int neighbours_k);
     bool IsFinished(const int &label);
-    void SpecialKNeighboursSearch(const std::size_t &point_index, const int neighbours_k, std::vector<int> &neighbours_id, std::vector<float> &neighbours_dist);
+    void SpecialKNeighboursSearch(const std::size_t &point_index, int neighbours_k, std::vector<int> &neighbours_id, std::vector<float> &neighbours_dist);
+    static std::pair<int, int> findEntryWithLargestValue(std::unordered_map<int, int> sampleMap);
+    
 public:
     EdgeCloud();
     EdgeCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud);
     EdgeCloud(const std::vector<int> &edge_indices, const pcl::PointCloud<pcl::PointXYZ>::Ptr& parent_cloud);
 
-    void SetDownsampling(bool activate, float leaf_size);
-
+    void SetDownsampling(bool down_sample, float leaf_size = 0.001f);
+    void SetStatOutRem(bool outrem, int MeanK = 20, float StddevMulThresh = 1.0);
+    void SetReuseIndices(const std::vector<int> &indices);
+    void SetEndIndices(const std::vector<int> &indices);
     void SegmentEdges(const int &neighbours_K, const float &dist_thresh, const float &angle_thresh, const bool &sort,
                       const bool &override_cont);
-    void ComputeVectors(const int &neighbours_K, const float &dist_thresh, const int &repeated_indexes_count, const bool &override);
+    void ComputeVectors(const int &neighbours_K, const float &dist_thresh, const bool &override);
     void RemoveFalseEdges(float region_width, bool use_coords);
     void
     ApplyRegionGrowing(const int &neighbours_k, const float &angle_thresh, const bool &sort);
