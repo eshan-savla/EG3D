@@ -11,10 +11,12 @@
 #include "EdgeCloud.h"
 
 
-RawCloud::RawCloud() : BaseCloud() {
+RawCloud::RawCloud() : BaseCloud(), returned_cloud(new pcl::PointCloud<pcl::PointXYZ>) {
     is_filtered = false;
     remove_first = false;
     remove_last = false;
+    do_downsample = false;
+    do_stat_outrem = false;
     first_ind.resize(0);
     last_ind.resize(0);
 }
@@ -38,16 +40,30 @@ void RawCloud::GenerateCloud(const int &pcl_size) {
     }
 }
 
-pcl::PointCloud<pcl::PointXYZ>::Ptr RawCloud::GetCloud() {
-    return cloud_data;
-}
-
-
 pcl::PointCloud<pcl::PointXYZ> RawCloud::FindEdgePoints(const int no_neighbours, const double angular_thresh_rads,
                                                         const float dist_thresh, const float radius,
                                                         const bool radial_search) {
-    if (!is_filtered)
-        PCL_WARN("Downsampling or filtering the point cloud is recommended!");
+    if (do_downsample) {
+        pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+        VoxelDownSample(filtered_cloud, leaf_size);
+        CorrectIndicesMapped(first_ind);
+        CorrectIndicesMapped(last_ind);
+        CorrectIndicesMapped(reuse_ind);
+        pcl::copyPointCloud(*filtered_cloud, *cloud_data);
+    }
+        
+    if (do_stat_outrem) {
+        pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+        StatOutlierRemoval(filtered_cloud, MeanK, StddevMulThresh);
+        CorrectIndicesRemoved(first_ind);
+        CorrectIndicesRemoved(last_ind);
+        CorrectIndicesRemoved(reuse_ind);
+        pcl::PointCloud<pcl::PointXYZ>::Ptr new_cloud (new pcl::PointCloud<pcl::PointXYZ>);
+        pcl::copyPointCloud(*cloud_data, last_ind, *new_cloud);
+        pcl::io::savePCDFileASCII("/home/eshan/TestEG3D/src/testeg3d/data/false_segment.pcd", *new_cloud);
+        pcl::copyPointCloud(*filtered_cloud, *cloud_data);
+    }
+
     const int K = no_neighbours;
     std::vector<int> edge_points_global;
     pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
@@ -86,8 +102,11 @@ pcl::PointCloud<pcl::PointXYZ> RawCloud::FindEdgePoints(const int no_neighbours,
     }
     if (remove_first || remove_last)
         RemoveFalseEdges(edge_points_global);
+    this->edge_points = edge_points_global;
     pcl::PointCloud<pcl::PointXYZ> return_cloud;
     pcl::copyPointCloud(*cloud_data, edge_points_global, return_cloud);
+    *returned_cloud = return_cloud;
+    CreateReturnIndexMap();
     return return_cloud;
 }
 
@@ -169,35 +188,144 @@ void RawCloud::RemoveFalseEdges(std::vector<int> &edge_point_indices) {
     for (int i = 0; i < edge_point_indices.size(); ++i) {
         index_lookup[edge_point_indices.at(i)] = i;
     }
+    std::unordered_map<int, bool> keep_indices;
+
+    for(int index : edge_point_indices) 
+    {
+        keep_indices[index] = true;
+    }
     if (remove_last && !last_ind.empty()) {
-        for (int i = static_cast<int>(last_ind.size() - 1); i >= 0 ; i--) {
-            if (index_lookup.find(last_ind.at(i)) != index_lookup.end()) {
-                std::size_t ind = index_lookup.at(last_ind.at(i));
-                edge_point_indices.erase(edge_point_indices.begin() + ind);
-            }
+        for (int index : last_ind)
+        {
+            if(index_lookup.find(index) != index_lookup.end())
+                keep_indices[index] = false;
         }
     }
+        
 
     if (remove_first && !first_ind.empty()) {
-        for (int i = static_cast<int>(first_ind.size() - 1); i >= 0 ; i--) {
-            if (index_lookup.find(first_ind.at(i)) != index_lookup.end()) {
-                std::size_t ind = index_lookup.at(first_ind.at(i));
-                edge_point_indices.erase(edge_point_indices.begin() + ind);
-            }
+        for (int index : first_ind)
+        {
+            if(index_lookup.find(index) != index_lookup.end())
+                keep_indices[index] = false;
         }
     }
+    if (!keep_indices.empty())
+    {
+        std::vector<int> new_edge_points;
+        for (int point_index : edge_point_indices)
+        {
+            if(keep_indices.at(point_index))
+                new_edge_points.push_back(point_index);
+        }
+        edge_point_indices.clear();
+        edge_point_indices = new_edge_points;
+    }
+
+    
 }
 
-void RawCloud::SetFirstInd(const std::vector<std::size_t> &first_ind) {
+void RawCloud::SetFirstInd(const std::vector<int> &first_ind) {
     this->first_ind = first_ind;
 }
 
-void RawCloud::SetLastInd(const std::vector<std::size_t> &last_ind) {
+void RawCloud::SetLastInd(const std::vector<int> &last_ind) {
     this->last_ind = last_ind;
 }
 
 void RawCloud::SetFilterCriteria(bool remove_first, bool remove_last) {
     this->remove_first = remove_first;
     this->remove_last = remove_last;
+}
+
+void RawCloud::SetDownSample(bool activate, float leaf_size) {
+    do_downsample = activate;
+    this->leaf_size = leaf_size;
+}
+
+void RawCloud::SetStatOutRem(bool activate, int MeanK, float StddevMulThresh) {
+    do_stat_outrem = activate;
+    this->MeanK = MeanK;
+    this->StddevMulThresh = StddevMulThresh;
+}
+
+void RawCloud::CorrectIndices(std::vector<int> &indices) {
+    std::vector<int> indices_copy = indices;
+    if (do_downsample)
+        CorrectIndicesMapped(indices_copy);
+    if(do_stat_outrem)
+        CorrectIndicesRemoved(indices_copy);
+
+    if(!edge_points.empty())
+    {
+        std::vector<int> edge_points_copy = edge_points;
+        std::sort(indices_copy.begin(), indices_copy.end());
+        std::sort(edge_points_copy.begin(), edge_points_copy.end());
+
+        std::unordered_map<int, bool> keep_indices;
+    //    std::unordered_map<std::size_t, std::size_t> index_lookup;
+    //    for (int i = 0; i < indices_copy.size(); ++i) {
+    //        index_lookup[indices_copy.at(i)] = i;
+    //    }
+
+        for (int index : indices_copy) {
+            keep_indices[index] = false;
+        }
+
+        std::vector<int> v(indices_copy.size() + edge_points_copy.size());
+        std::vector<int>::iterator it, st;
+
+        it = std::set_intersection(indices_copy.begin(), indices_copy.end(), edge_points_copy.begin(), edge_points_copy.end(), v.begin());
+        std::vector<int> common_points;
+        for (st = v.begin(); st != it ; ++st) {
+            common_points.push_back(*st);
+            keep_indices[*st] = true;
+        }
+    //    for (int edge_point : edge_points) {
+    //        if (index_lookup.find(edge_point) != index_lookup.end())
+    //            keep_indices[edge_point] = true;
+    //    }
+
+        std::vector<int> new_indices;
+        for (int index : indices_copy) {
+            if (keep_indices.at(index))
+                new_indices.push_back(index);
+        }
+
+        if (!return_index_map.empty()) {
+            std::vector<int> adjusted_new_indices(new_indices.size());
+            for (int i = 0; i < new_indices.size(); i++) {
+                adjusted_new_indices.at(i) = static_cast<int>(return_index_map.at(new_indices.at(i)));
+            }
+            new_indices.clear();
+            new_indices = adjusted_new_indices;
+        }
+        indices.clear();
+        indices = new_indices;
+    }
+}
+
+void RawCloud::SetReuseInd(const std::vector<int> &reuse_ind) {
+    this->reuse_ind = reuse_ind;
+}
+
+std::vector<int> RawCloud::GetReuseInd() {
+    return reuse_ind;
+}
+
+std::vector<int> RawCloud::GetFirstInd() {
+    return first_ind;
+}
+
+std::vector<int> RawCloud::GetLastInd() {
+    return last_ind;
+}
+
+void RawCloud::CreateReturnIndexMap() {
+    assert((void("Edge points vector and returned cloud are unequal"), edge_points.size() == returned_cloud->size()));
+
+    for (std::size_t i = 0; i < returned_cloud->size(); ++i) {
+        return_index_map[edge_points.at(i)] = i;
+    }
 }
 

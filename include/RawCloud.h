@@ -20,10 +20,17 @@
 class RawCloud : public BaseCloud {
 private:
     unsigned int count_before, count_after;
+    int MeanK;
+    float leaf_size, StddevMulThresh;
 //    std::string file_path;
     bool is_filtered;
+    bool do_downsample;
+    bool do_stat_outrem;
     bool remove_first, remove_last;
-    std::vector<std::size_t> first_ind, last_ind;
+    std::vector<int> first_ind, last_ind, reuse_ind, edge_points;
+    std::unordered_map<unsigned long, unsigned long> return_index_map;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr returned_cloud;
+
     void ComputeInliers(const float &dist_thresh, std::vector<int> &neighbours, std::vector<int> &local_inliers,
                         pcl::PointCloud<pcl::PointXYZ>::Ptr &refined_cloud, std::vector<int> &global_inliers);
     static std::tuple<Eigen::Vector4f, float> EstimateNormals(pcl::PointCloud<pcl::PointXYZ>::Ptr &input_cloud,
@@ -31,13 +38,21 @@ private:
     static double ComputeAngularGap(const pcl::PointXYZ &origin, pcl::PointCloud<pcl::PointXYZ>::Ptr &local_cloud,
                                   Eigen::Vector4f &plane_parameters);
     void RemoveFalseEdges(std::vector<int> &edge_point_indices);
+    void CreateReturnIndexMap();
 
 public:
     RawCloud();
     void GenerateCloud(const int &pcl_size);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr GetCloud();
-    void SetFirstInd(const std::vector<std::size_t> &first_ind);
-    void SetLastInd(const std::vector<std::size_t> &last_ind);
+    void SetDownSample(bool activate, float leaf_size);
+    void SetStatOutRem(bool activate, int MeanK, float StddevMulThresh);
+    void CorrectIndices(std::vector<int> &indices);
+//    pcl::PointCloud<pcl::PointXYZ>::Ptr GetCloud();
+    void SetFirstInd(const std::vector<int> &first_ind);
+    void SetLastInd(const std::vector<int> &last_ind);
+    void SetReuseInd(const std::vector<int> &reuse_ind);
+    std::vector<int> GetFirstInd();
+    std::vector<int> GetLastInd();
+    std::vector<int> GetReuseInd();
     void SetFilterCriteria(bool remove_first = false, bool remove_last = false);
 
     pcl::PointCloud<pcl::PointXYZ> FindEdgePoints(const int no_neighbours, const double angular_thresh_rads,
