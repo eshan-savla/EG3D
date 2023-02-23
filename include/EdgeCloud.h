@@ -82,7 +82,7 @@ private:
     
 public:
     EdgeCloud();
-    EdgeCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud);
+    explicit EdgeCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud);
     EdgeCloud(const std::vector<int> &edge_indices, const pcl::PointCloud<pcl::PointXYZ>::Ptr& parent_cloud);
 
     void SetDownsampling(bool down_sample, float leaf_size = 0.001f);
@@ -107,7 +107,7 @@ public:
 
 inline bool Compare(std::pair<unsigned long, int> i, std::pair<unsigned long, int> j) {
     return (i.first > j.first);
-};
+}
 
 
 #endif //EG3D_EDGECLOUD_H

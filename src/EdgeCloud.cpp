@@ -203,26 +203,25 @@ void EdgeCloud::ApplyRegionGrowing(const int &neighbours_k, const float &angle_t
     std::vector<std::pair<unsigned long, int>> point_residual;
     std::pair<unsigned long, int> pair;
     point_residual.resize(num_of_pts - initial, pair);
-    for (int i_point = 0; i_point < num_of_pts - initial; i_point++) {
+    for (int i_point = 0; i_point < point_residual.size(); i_point++) {
         int point_index = i_point + initial;
         point_residual[i_point].first = neighbours_map.at(point_index).size();
         point_residual[i_point].second = point_index;
     }
+
+    int num_of_segmented_pts = 0;
+    int new_segmented_points = ExtendSegments(neighbours_k);
     if(sort) {
         std::sort(point_residual.begin(), point_residual.end(), Compare);
     }
-
-    int seed = point_residual.at(0).second;
-    int num_of_segmented_pts = 0;
-    int num_of_segments = total_num_of_segments;
-
-    int new_segmented_points = ExtendSegments(neighbours_k);
     num_of_segmented_pts += new_segmented_points;
-
+    int seed = point_residual.at(0).second;
+    int num_of_segments = total_num_of_segments;
     int vec_size = vectors_map.size(), nei_size = neighbours_map.size();
     int b = 0;
-    while (num_of_segmented_pts < num_of_pts - initial) {
+    while (num_of_segmented_pts < (num_of_pts - initial)) {
         bool new_segment_needed = true;
+        int point_label = point_labels.at(seed);
         // Iterate through all latest segments to check if seed belongs to existing segment
         bool faux_point;
         if (false_edges.empty())
@@ -281,7 +280,7 @@ void EdgeCloud::ApplyRegionGrowing(const int &neighbours_k, const float &angle_t
             num_of_segments++;
         }
 //        }
-        for (int i_seed = seed_counter + 1; i_seed < num_of_pts - initial ; i_seed++) {
+        for (int i_seed = seed_counter + 1; i_seed < point_residual.size() ; i_seed++) {
             int index = point_residual[i_seed].second;
             bool condition = true;
             if (point_labels[index] == -1 && condition) {
@@ -293,24 +292,57 @@ void EdgeCloud::ApplyRegionGrowing(const int &neighbours_k, const float &angle_t
     }
     // total_num_of_segmented_pts = num_of_segmented_pts;
     total_num_of_segments = num_of_segments;
-    reused_inds_start.clear();
-    reused_inds_prev = reused_inds_end;
-    reused_inds_end.clear();
 }
 
 int EdgeCloud::ExtendSegments(const int neighbours_k) {
     //TODO: Reset labels of reused inds and neighbours to -1 for re-segmentation
-    
+    std::vector<int> point_labels_copy = point_labels;
+    int count_before = std::count(point_labels.begin(), point_labels.end(), -1);
+    std::vector<bool> reset_indices_map(previous_size, false);
+    int presegmented_count = 0;
+    for(const int &index : reused_inds_prev) {
+        for(const int &neighbour : neighbours_map.at(index)) {
+            int label = point_labels_copy.at(neighbour);
+            if (label < 0)
+                continue;
+            if (reset_indices_map.at(neighbour))
+                continue;
+
+            if (neighbour < previous_size)
+                presegmented_count++;
+            num_pts_in_segment.at(label) = num_pts_in_segment.at(label) - 1;
+            point_labels.at(neighbour) = -1;
+            reset_indices_map.at(neighbour) = true;
+        }
+    }
+    int count_after_change = std::count(point_labels.begin(), point_labels.end(), -1);
     int num_of_segmented_pts = 0;
     for(const int &point_index : reused_inds_prev) {
-        int segment_id = point_labels.at(point_index);
+        if (point_labels.at(point_index) != -1)
+            continue;
+        int segment_id = point_labels_copy.at(point_index);
         if (segment_id < 0)
             continue;
         int new_pts_in_segment = GrowSegment(point_index, segment_id, neighbours_k);
         num_pts_in_segment.at(segment_id) += new_pts_in_segment;
         num_of_segmented_pts += new_pts_in_segment;
     }
-    return num_of_segmented_pts;
+    for(const int &index : reused_inds_prev) {
+        for(const int &neighbour : neighbours_map.at(index)) {
+            if (point_labels.at(neighbour) != -1)
+                continue;
+
+            int old_label = point_labels_copy.at(neighbour);
+            if(old_label == -1)
+                continue;
+            point_labels.at(neighbour) = old_label;
+            num_pts_in_segment.at(old_label) = num_pts_in_segment.at(old_label) + 1;
+            num_of_segmented_pts++;
+        }
+    }
+    int count_after = std::count(point_labels.begin(), point_labels.end(), -1);
+    assert((void("Num of segmented points is negative"), presegmented_count <= num_of_segmented_pts));
+    return num_of_segmented_pts - presegmented_count;
 }
 
 int EdgeCloud::GrowSegment(const int &initial_seed, const int &segment_id, const int &neighbours_k, bool use_original) {
@@ -348,7 +380,7 @@ int EdgeCloud::GrowSegment(const int &initial_seed, const int &segment_id, const
                 continue;
             }
             bool is_seed = false;
-            bool belongs_to_segment = CheckPoint(original_seed, index, is_seed);
+            bool belongs_to_segment = CheckPoint(current_seed, index, is_seed);
             if (!belongs_to_segment) {
                 i_nghbr++;
                 continue;
@@ -391,6 +423,7 @@ void EdgeCloud::AssembleRegions() {
     const auto num_of_segs_check = total_num_of_segments;
     const long no_of_unseg = std::count(point_labels.begin(), point_labels.end(), -1);
     std::cout << "No. of segs: " << num_of_segs << "check: " << num_of_segs_check << std::endl;
+    std::cout <<  "No of unsegmented pts: " << no_of_unseg << std::endl;
 
 
     std::vector<int> segment;
@@ -524,8 +557,8 @@ void EdgeCloud::Init() {
     override_cont = false;
     cloud_data->is_dense = true;
     previous_size = 0;
-    reused_inds_end.resize(0);
-    reused_inds_prev.resize(0);
+//    reused_inds_end.resize(0);
+//    reused_inds_prev.resize(0);
     seg_tag_thresh = std::cos(85.0 / 180.0 * M_PI);
     scan_direction.setZero();
     SetSensorSpecs(0.0, 0.0, 0.0);
@@ -612,6 +645,7 @@ void EdgeCloud::SetReuseIndices(const std::vector<int> &indices) {
 }
 
 void EdgeCloud::SetEndIndices(const std::vector<int> &indices) {
+    reused_inds_prev = reused_inds_end;
     reused_inds_end = indices;
 
 }
@@ -647,7 +681,8 @@ std::pair<int, int> EdgeCloud::findEntryWithLargestValue(
 }
 
 void EdgeCloud::ShiftIndices(std::vector<int> &indices) {
-    int base_index = previous_size - previous_sizes.at(previous_sizes.size() - 1);
+    // int base_index = previous_size - previous_sizes.at(previous_sizes.size() - 2);
+    int base_index = previous_size;
     std::vector<int> indices_new;
     indices_new.resize(indices.size());
     for (int i = 0; i < indices.size(); ++i) {
