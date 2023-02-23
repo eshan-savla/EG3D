@@ -9,12 +9,16 @@ This library makes use of the [Point Cloud Library](https://pointclouds.org/) an
 [OpenMP](https://www.openmp.org/).
 
 ## Current Stand
-Currently, the library is capable of computing edge points of any point cloud object, albeit at a lower performance. 
-Drastic performance increase using parallelized for loops from OpenMP
+The method in the paper was originally conceived for edge detection and line segmentation of complete point clouds.
+This project attempts to adapt the method to achieve edge detection and line segmentation of point clouds which are
+incomplete and are grown iteratively. Performance is improved by parallelizing edge detection and vector computation.
+This project currently has the following functionality:
+- Edge detection (smooth lines)
+- Recognition of 2D geometric profiles in complete point clouds
+- Online edge detection and line segmentation of growing point clouds
+- ROS Wrapper and test environment found [here](https://gitlab.cc-asp.fraunhofer.de/RobotKit/student_projects/testeg3d).
 
 ## Future Implementations
-- Edge detection (smooth lines)
-- Recognition of 2D geometric profiles
 - 3D profile information
-- online edge detection
-- ROS Wrapper
+- Classification of segmented lines into geometric profiles
+- Parallelization of complete online segmentation process on the ros front
