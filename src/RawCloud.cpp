@@ -68,7 +68,7 @@ pcl::PointCloud<pcl::PointXYZ> RawCloud::FindEdgePoints(const int no_neighbours,
     std::vector<int> edge_points_global;
     pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
     kdtree.setInputCloud(cloud_data);
-#pragma omp parallel default(none) shared(angular_thresh_rads, edge_points_global, dist_thresh, radius, radial_search, kdtree, K)
+#pragma omp parallel default(none) shared(angular_thresh_rads, cloud_data, edge_points_global, dist_thresh, radius, radial_search, kdtree, K)
     {
         std::vector<int> edge_points_thread;
         #pragma omp for nowait
@@ -83,15 +83,16 @@ pcl::PointCloud<pcl::PointXYZ> RawCloud::FindEdgePoints(const int no_neighbours,
                 if (kdtree.nearestKSearch(origin, K, neighbour_ids, neighbour_sqdist) < 3)
                     continue;
             }
-            std::vector<int> local_inliers, global_inliers;
-            pcl::PointCloud<pcl::PointXYZ>::Ptr neighbours_cloud(new pcl::PointCloud<pcl::PointXYZ>);
-            ComputeInliers(dist_thresh, neighbour_ids, local_inliers, neighbours_cloud, global_inliers);
-            if (!InInliers(i, global_inliers) || local_inliers.size() < 3) {
+            std::vector<int> global_inliers;
+            ComputeInliers(dist_thresh, neighbour_ids, global_inliers);
+            if (!InInliers(i, global_inliers) || global_inliers.size() < 3) {
                 continue;
             } else {
                 Eigen::Vector4f plane_parameters;
                 float curvature;
-                std::tie(plane_parameters, curvature) = EstimateNormals(neighbours_cloud, local_inliers);
+                std::tie(plane_parameters, curvature) = EstimateNormals(cloud_data, global_inliers);
+                pcl::PointCloud<pcl::PointXYZ>::Ptr neighbours_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+                ExtractIndices(global_inliers, neighbours_cloud);
                 double G0 = ComputeAngularGap(origin, neighbours_cloud, plane_parameters);
                 if (G0 >= angular_thresh_rads)
                     edge_points_thread.push_back(i);
@@ -112,20 +113,14 @@ pcl::PointCloud<pcl::PointXYZ> RawCloud::FindEdgePoints(const int no_neighbours,
 
 
 
-void RawCloud::ComputeInliers(const float &dist_thresh, std::vector<int> &neighbours, std::vector<int> &local_inliers,
-                              pcl::PointCloud<pcl::PointXYZ>::Ptr &refined_cloud, std::vector<int> &global_inliers) {
+void
+RawCloud::ComputeInliers(const float &dist_thresh, std::vector<int> &neighbours, std::vector<int> &global_inliers) {
 
-    ExtractIndices(neighbours, refined_cloud);
-    pcl::SampleConsensusModelPlane<pcl::PointXYZ>::Ptr model_p (new pcl::SampleConsensusModelPlane<pcl::PointXYZ> (refined_cloud));
+    pcl::SampleConsensusModelPlane<pcl::PointXYZ>::Ptr model_p (new pcl::SampleConsensusModelPlane<pcl::PointXYZ> (cloud_data, neighbours));
     pcl::RandomSampleConsensus<pcl::PointXYZ> local_plane_fitter (model_p);
     local_plane_fitter.setDistanceThreshold(dist_thresh);
     local_plane_fitter.computeModel();
-    local_plane_fitter.getInliers(local_inliers);
-    pcl::copyPointCloud(*refined_cloud, local_inliers, *refined_cloud);
-
-    for (int &elem : local_inliers) {
-        global_inliers.push_back(neighbours[elem]);
-    }
+    local_plane_fitter.getInliers(global_inliers);
 }
 
 std::tuple<Eigen::Vector4f, float> RawCloud::EstimateNormals(pcl::PointCloud<pcl::PointXYZ>::Ptr &input_cloud,

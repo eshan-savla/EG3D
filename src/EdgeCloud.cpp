@@ -86,11 +86,6 @@ void EdgeCloud::ComputeVectors(const int &neighbours_K, const float &dist_thresh
             std::vector<float> squared_distances;
             neighbour_ids.clear();
             squared_distances.clear();
-//            bool condition;
-//            if (reused_indices_map.empty())
-//                condition = false;
-//            else
-//                condition = reused_indices_map.at(point_index);
             kdtree.nearestKSearch(cloud_data->points[point_index], neighbours_K, neighbour_ids, squared_distances);
             std::vector<int> local_inliers, global_inliers;
             bool point_in_inliers = false;
@@ -217,8 +212,6 @@ void EdgeCloud::ApplyRegionGrowing(const int &neighbours_k, const float &angle_t
     num_of_segmented_pts += new_segmented_points;
     int seed = point_residual.at(0).second;
     int num_of_segments = total_num_of_segments;
-    int vec_size = vectors_map.size(), nei_size = neighbours_map.size();
-    int b = 0;
     while (num_of_segmented_pts < (num_of_pts - initial)) {
         bool new_segment_needed = true;
         int point_label = point_labels.at(seed);
@@ -234,44 +227,7 @@ void EdgeCloud::ApplyRegionGrowing(const int &neighbours_k, const float &angle_t
         }
         if(point_labels.at(seed) != -1)
             new_segment_needed = false;
-//        else {
-//            if (is_appended && !override_cont) {
-//                std::unordered_map<int, int> label_count_map;
-//                for (const int &neighbour: neighbours_map.at(seed)) {
-//                    int label = point_labels.at(neighbour);
-//                    if (label != -1 && label != -2 && label < total_num_of_segments)
-//                    {
-//                        if(label_count_map.find(label) != label_count_map.end())
-//                            label_count_map[label] += 1;
-//                        else
-//                            label_count_map[label] = 1;
-//                    }
-//                }
-//                if(!label_count_map.empty()) {
-//                    bool finished = false;
-//                    while (!finished)
-//                    {
-//                        std::pair<int, int> max_value = findEntryWithLargestValue(label_count_map);
-//                        if(max_value.second <= 0)
-//                            break;
-////                        Eigen::Vector3f seg_vec = segment_vectors.at(max_value.first);
-//                        int new_pts_in_segment = ExtendSegments(0);
-//
-//                        if(new_pts_in_segment >= 1){
-//                            num_of_segmented_pts += new_pts_in_segment;
-//                             num_pts_in_segment.at(max_value.first) += new_pts_in_segment;
-//                            finished = true;
-//                            new_segment_needed = false;
-//                        }
-//
-//                        if(label_count_map.empty())
-//                            break;
-//
-//                        label_count_map.erase(max_value.first);
-//                    }
-//                }
-//            }
-            // If seed NOT belong to existing segment, grow new segment
+        // If seed NOT belong to existing segment, grow new segment
         if (new_segment_needed) {
             segment_seed_map[num_of_segments] = seed;
             Segment current_segment;

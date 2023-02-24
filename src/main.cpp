@@ -14,7 +14,7 @@ int main(int argc, const char * argv[]) {
     raw_input.ReadCloud("../data/Blech.pcd");
 //    raw_input.GenerateCloud(1000);
     raw_input.VoxelDownSample(0.0001f);
-//    raw_input.StatOutlierRemoval(10,1.0);
+    raw_input.StatOutlierRemoval(50,1.5);
     std::cout << "Points after down sample: " << raw_input.GetCount() << std::endl;
     std::vector<int> edge_points;
     pcl::StopWatch stpw;
@@ -23,9 +23,9 @@ int main(int argc, const char * argv[]) {
     pcl::PointCloud<pcl::PointXYZ>::Ptr edge_cloud (new pcl::PointCloud<pcl::PointXYZ>);
     *edge_cloud = raw_input.FindEdgePoints(200, M_PI_2, 0.01);
     EdgeCloud edges;
-    edges.AddPoints(edge_cloud);
     double duration = stpw.getTimeSeconds();
-    edges.StatOutlierRemoval(10, 1.0);
+    edges.SetStatOutRem(false, 50, 1.5);
+    edges.AddPoints(edge_cloud);
     std::cout << "Processing duration: " << duration << std::endl;
     edges.SaveCloud("../data/edge_points.pcd");
     std::cout << "Segmenting edges" << std::endl;
