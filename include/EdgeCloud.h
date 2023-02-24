@@ -67,9 +67,9 @@ private:
         int segment_id;
         int origin_seed, last_point;
         Eigen::Vector3f origin_seed_dir, segment_dir;
-
     };
 
+    std::unordered_map<int, Segment> segment_infos;
     void Init();
 
     int GrowSegment(const int &initial_seed, const int &segment_id, const int &neighbours_k, bool use_original = false);

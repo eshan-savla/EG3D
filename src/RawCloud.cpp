@@ -148,8 +148,6 @@ double RawCloud::ComputeAngularGap(const pcl::PointXYZ &origin, pcl::PointCloud<
     pcl::PointXYZ second_point = local_cloud->points[second];
     Eigen::Vector3f u;
     CreateVector(first_point, second_point, u);
-    Eigen::Vector3f e_first_vector = first_point.getVector3fMap();
-    Eigen::Vector3f e_second_vector = second_point.getVector3fMap();
     Eigen::Vector3f normal = plane_parameters.head<3>();
     Eigen::Vector3f v = u.cross(normal);
     std::vector<double> thetas_global, deltas;

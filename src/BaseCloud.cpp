@@ -179,10 +179,6 @@ pcl::IndicesConstPtr BaseCloud::StatOutlierRem(pcl::PointCloud<pcl::PointXYZ>::P
     pcl::PointIndices pi;
     sor.getRemovedIndices(pi);
     pcl::PointCloud<pcl::PointXYZ> cl, cl2;
-    // pcl::copyPointCloud(*cloud, pi, cl);
-    // pcl::io::savePCDFileASCII("/home/eshan/TestEG3D/src/testeg3d/data/removed_points.pcd", cl);
-    // pcl::copyPointCloud(*cloud, inliers, cl2);
-    // pcl::io::savePCDFileASCII("/home/eshan/TestEG3D/src/testeg3d/data/kept_points.pcd", cl2);
     pcl::IndicesConstPtr return_inds (new pcl::Indices(pi.indices));
     pcl::copyPointCloud(*cloud, inliers, *cloud);
     return return_inds;
@@ -190,11 +186,6 @@ pcl::IndicesConstPtr BaseCloud::StatOutlierRem(pcl::PointCloud<pcl::PointXYZ>::P
 
 void BaseCloud::CorrectIndicesRemoved(std::vector<int> &indices_vector) {
     if (!indices_vector.empty()) {
-        // int first_val = indices_vector.at(0);
-        // for (int i = static_cast<int>(indices_vector.size()) - 1; i >= 0; --i) {
-        //     if (removed_indices_.at(first_val + i))
-        //         indices_vector.erase(indices_vector.begin() + i);
-        // }
         std::vector<int> new_vector;
         for (int index : indices_vector)
         {
@@ -223,9 +214,6 @@ void BaseCloud::CorrectIndicesMapped(std::vector<int> &indices_vector) {
                 added_points.at(new_index) = true;
             }
         }
-//        pcl::PointCloud<pcl::PointXYZ>::Ptr new_cloud (new pcl::PointCloud<pcl::PointXYZ>);
-//        pcl::copyPointCloud(*cloud_data, indices_vector, *new_cloud);
-//        pcl::io::savePCDFileASCII("/home/eshan/TestEG3D/src/testeg3d/data/false_segment.pcd", *new_cloud);
         indices_vector.clear();
         indices_vector = new_vector;
         pcl::PointCloud<pcl::PointXYZ> cl;

@@ -274,6 +274,12 @@ void EdgeCloud::ApplyRegionGrowing(const int &neighbours_k, const float &angle_t
             // If seed NOT belong to existing segment, grow new segment
         if (new_segment_needed) {
             segment_seed_map[num_of_segments] = seed;
+            Segment current_segment;
+            current_segment.segment_id = num_of_segments;
+            current_segment.origin_seed = seed;
+            current_segment.origin_seed_dir = vectors_map.at(seed);
+            current_segment.segment_dir = current_segment.origin_seed_dir;
+            segment_infos[num_of_segments] = current_segment;
             int pts_in_segment = GrowSegment(seed, num_of_segments, neighbours_k, false);
             num_of_segmented_pts += pts_in_segment;
             num_pts_in_segment.push_back(pts_in_segment);
@@ -391,6 +397,7 @@ int EdgeCloud::GrowSegment(const int &initial_seed, const int &segment_id, const
                 seeds.push(index);
             i_nghbr++;
         }
+        segment_infos[segment_id].segment_dir = segment_infos[segment_id].segment_dir + vectors_map.at(current_seed);
     }
     return num_pts;
 }
@@ -495,39 +502,38 @@ void EdgeCloud::CreateColouredCloud(const std::string &path) {
 
 void EdgeCloud::AddPoints(const pcl::PointCloud<pcl::PointXYZ>::Ptr &new_points) {
     if (reused_inds_end.empty())
-        PCL_ERROR("Set indices of reused points before adding new points");
+        PCL_WARN("Set indices of reused points before adding new points\n");
+
+    this->new_points = new_points;
+    if(cloud_data->empty())
+        previous_sizes.push_back(0);
     else {
-        this->new_points = new_points;
-        if(cloud_data->empty())
-            previous_sizes.push_back(0);
-        else {
-            previous_size = cloud_data->size();
-            previous_sizes.push_back(previous_size - previous_sizes.at(previous_sizes.size() - 1));
-        }
+        previous_size = cloud_data->size();
+        previous_sizes.push_back(previous_size - previous_sizes.at(previous_sizes.size() - 1));
+    }
 
-        if (downsample){
-            pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud(new pcl::PointCloud<pcl::PointXYZ>);
-            VoxelDownSample(this->new_points, leaf_size, filtered_cloud);
-            CorrectIndicesMapped(reused_inds_end);
-            pcl::copyPointCloud(*filtered_cloud, *(this->new_points));
-        }
-        if (outrem) {
-            pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud(new pcl::PointCloud<pcl::PointXYZ>);
-            StatOutlierRemoval(this->new_points, MeanK, StddevMulThresh, filtered_cloud);
-            CorrectIndicesRemoved(reused_inds_end);
-            pcl::copyPointCloud(*filtered_cloud, *(this->new_points));
-        }
-        ShiftIndices(reused_inds_end);
+    if (downsample){
+        pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+        VoxelDownSample(this->new_points, leaf_size, filtered_cloud);
+        CorrectIndicesMapped(reused_inds_end);
+        pcl::copyPointCloud(*filtered_cloud, *(this->new_points));
+    }
+    if (outrem) {
+        pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+        StatOutlierRemoval(this->new_points, MeanK, StddevMulThresh, filtered_cloud);
+        CorrectIndicesRemoved(reused_inds_end);
+        pcl::copyPointCloud(*filtered_cloud, *(this->new_points));
+    }
+    ShiftIndices(reused_inds_end);
 
-        if (cloud_data->empty()) {
-            Init();
-            LoadInCloud(new_points);
-        } else {
-            // previous_size = cloud_data->size();
-            // previous_sizes.push_back(previous_size - previous_sizes.at(previous_sizes.size() - 1));
-            *cloud_data += *new_points;
-            is_appended = true;
-        }
+    if (cloud_data->empty()) {
+        Init();
+        LoadInCloud(this->new_points);
+    } else {
+        // previous_size = cloud_data->size();
+        // previous_sizes.push_back(previous_size - previous_sizes.at(previous_sizes.size() - 1));
+        *cloud_data += *(this->new_points);
+        is_appended = true;
     }
 }
 
