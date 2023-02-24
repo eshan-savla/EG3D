@@ -257,7 +257,6 @@ void EdgeCloud::ApplyRegionGrowing(const int &neighbours_k, const float &angle_t
 }
 
 int EdgeCloud::ExtendSegments(const int neighbours_k) {
-    //TODO: Reset labels of reused inds and neighbours to -1 for re-segmentation
     std::vector<int> point_labels_copy = point_labels;
     int count_before = std::count(point_labels.begin(), point_labels.end(), -1);
     std::vector<bool> reset_indices_map(previous_size, false);
