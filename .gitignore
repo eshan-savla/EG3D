@@ -17,3 +17,5 @@
 /data/segments_blech.pcd
 /data/segments_table.pcd
 /build/
+/docs/
+/.vscode/c_cpp_properties.json
