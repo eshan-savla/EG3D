@@ -38,22 +38,6 @@ EdgeCloud::SegmentEdges(const int &neighbours_K, const float &dist_thresh, const
 void EdgeCloud::ComputeVectors(const int &neighbours_K, const float &dist_thresh, const bool &override) {
     this->override_cont = override;
     pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
-    // pcl::KdTreeFLANN<pcl::PointXYZ> kdtree_special;
-    // if (is_appended)
-    // {
-    //     std::vector<int> special_indices(new_points->size() + reused_inds_prev.size());
-    //     if (!reused_inds_prev.empty()) {
-    //         for (int i = 0; i < reused_inds_prev.size(); ++i) {
-    //             special_indices.at(i) = reused_inds_prev.at(i);
-    //         }
-    //     }
-    //     for (int i = static_cast<int>(reused_inds_prev.size()); i < special_indices.size(); ++i) {
-    //         special_indices.at(i) = i - reused_inds_prev.size() + previous_size;
-    //     }
-    //     pcl::IndicesConstPtr indices (new pcl::Indices(special_indices));
-    //     kdtree_special.setInputCloud(cloud_data, indices);
-    // }
-    // else
     kdtree.setInputCloud(cloud_data);
     std::vector<int> point_indices(new_points->size() + reused_inds_prev.size());
     if (is_appended) {
@@ -516,6 +500,8 @@ void EdgeCloud::Init() {
     bef_aft_ratio = 0.0;
     is_appended = false;
     override_cont = false;
+    downsample = false;
+    outrem = false;
     cloud_data->is_dense = true;
     previous_size = 0;
 //    reused_inds_end.resize(0);
@@ -592,17 +578,6 @@ void EdgeCloud::SetStatOutRem(bool outrem, int MeanK, float StddevMulThresh) {
     this->outrem = outrem;
     this->MeanK = MeanK;
     this->StddevMulThresh = StddevMulThresh;
-}
-
-void EdgeCloud::SetReuseIndices(const std::vector<int> &indices) {
-//    std::vector<bool> reuse_indices_map_local;
-//    reused_inds_start.clear();
-//    reuse_indices_map_local.resize(new_points->size(), false);
-//    for (int index : indices) {
-//        reuse_indices_map_local.at(index) = true;
-//        reused_inds_start.push_back(index + previous_size);
-//    }
-//    reused_indices_map.insert(reused_indices_map.end(), reuse_indices_map_local.begin(), reuse_indices_map_local.end());
 }
 
 void EdgeCloud::SetEndIndices(const std::vector<int> &indices) {

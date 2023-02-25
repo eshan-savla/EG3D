@@ -17,7 +17,7 @@
 #include <pcl/filters/voxel_grid.h>
 
 
-/// @brief Base cloud for cloud processors.
+/// @brief Base class for cloud processors.
 ///
 /// This class provides basic functionalities needed for each of the cloud processing classes. 
 class BaseCloud {
@@ -27,6 +27,46 @@ protected:
     std::vector<int> index_map_vg; ///< Maps old points to their centroids after down sampling.
     std::vector<int> point_shifts; ///< Stores index shift of inlier points in filtered cloud after outlier removal.
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_data; ///< Stores the point cloud data.
+
+    /// @brief Method to create sub cloud from cloud_data_.
+    ///
+    /// This method makes use of point indices to isolate certain points from cloud_data to create a new point cloud.
+    /// @param[in] indices Indices of points for new sub cloud
+    /// @param[out] cloud Pointer to new sub cloud
+    void ExtractIndices(const std::vector<int> &indices, pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud);
+
+    /// @brief Method to create vector from two points.
+    ///
+    /// This method creates a vector between two points.
+    /// @param[in] pt1 First point
+    /// @param[in] pt2 Second point
+    /// @param[out] vec Vector between points
+    static void CreateVector(const pcl::PointXYZ &pt1, const pcl::PointXYZ &pt2, Eigen::Vector3f &vec);
+
+    /// @brief Method to check if point lies is in inliers.
+    ///
+    /// This method checks if point provided is in inliers.
+    /// @param[in] origin Point index to be checked
+    /// @param global_inliers Vector containing inliers
+    /// @return boolean value if origin in inliers
+    static bool InInliers(unsigned long origin, std::vector<int> &global_inliers);
+
+    /// @brief Method to perform statistical outlier removal.
+    ///
+    /// This method does statistical outlier removal on input cloud and returns outliers. The method is utilized by all overloaded versions of
+    ///     StatOutlierRemoval
+    /// @param[in, out] cloud Cloud to be filtered and returned
+    /// @param[in] MeanK Number of nearest neighbours to use for mean distance estimation
+    /// @param[in] StddevMulThresh
+    /// @return Pointer to indices container containing outliers
+    static pcl::IndicesConstPtr StatOutlierRem(pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud, int MeanK, float StddevMulThresh);
+
+    /// @brief Method to perform voxel down sampling.
+    ///
+    /// @param cloud
+    /// @param leaf_size
+    /// @return
+    static std::vector<int> VoxelDownSample_(pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud, float leaf_size);
 
     /// @brief Method to mark point indices removed by outlier removal.
     ///
@@ -46,47 +86,6 @@ protected:
     /// This method adjusts the point indices provided. Indices provided will be replaced by the corresponding point centroid created after down sampling.
     /// @param[in, out] indices_vector Vector containing indices to be corrected after voxel down sampling
     void CorrectIndicesMapped(std::vector<int> &indices_vector);
-
-    /// @brief Method to create sub cloud from cloud_data_.
-    ///
-    /// This method makes use of point indices to isolate certain points from cloud_data to create a new point cloud.
-    /// @param[in] indices Indices of points for new sub cloud
-    /// @param[out] cloud Pointer to new sub cloud
-    void ExtractIndices(const std::vector<int> &indices, pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud);
-
-    /// @brief Method to perform statistical outlier removal.
-    ///
-    /// This method does statistical outlier removal on input cloud and returns outliers. The method is utilized by all overloaded versions of 
-    ///     StatOutlierRemoval
-    /// @param[in, out] cloud Cloud to be filtered and returned
-    /// @param[in] MeanK Number of nearest neighbours to use for mean distance estimation
-    /// @param[in] StddevMulThresh 
-    /// @return Pointer to indices container containing outliers
-    static pcl::IndicesConstPtr StatOutlierRem(pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud, int MeanK, float StddevMulThresh);
-
-    /// @brief Method to perform voxel down sampling.
-    ///
-    /// @param cloud 
-    /// @param leaf_size 
-    /// @return 
-    static std::vector<int> VoxelDownSample_(pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud, float leaf_size);
-
-    /// @brief Method to create vector from two points.
-    ///
-    /// This method creates a vector between two points.
-    /// @param[in] pt1 First point 
-    /// @param[in] pt2 Second point
-    /// @param[out] vec Vector between points 
-    static void CreateVector(const pcl::PointXYZ &pt1, const pcl::PointXYZ &pt2, Eigen::Vector3f &vec);
-
-    /// @brief Method to check if point lies is in inliers.
-    ///
-    /// This method checks if point provided is in inliers.
-    /// @param[in] origin Point index to be checked
-    /// @param global_inliers Vector containing inliers
-    /// @return boolean value if origin in inliers
-    static bool InInliers(unsigned long origin, std::vector<int> &global_inliers);
-
 
 public:
     /// @brief Empty constructor.

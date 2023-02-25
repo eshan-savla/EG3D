@@ -17,7 +17,7 @@
 #include <string>
 #include "EdgeCloud.h"
 
-/// @brief Cloud to process raw point cloud and find edge points.
+/// @brief Class to process raw point cloud and find edge points.
 ///
 /// This class provides functionalities to find edge points in growing point clouds.
 class RawCloud : public BaseCloud {
@@ -48,28 +48,6 @@ public:
     /// @param[in] pcl_size Cloud size.
     void GenerateCloud(const int &pcl_size);
 
-    /// @brief Method to activate/deactivate voxel down sampling.
-    ///
-    /// This method activates/deactivates the down sampling of the internally stored cloud data before edge point detection.
-    /// @param[in] activate Bool value to activate/deactivate down sampling.
-    /// @param[in] leaf_size Leaf size to be used for creating voxel grid.
-    void SetDownSample(bool activate, float leaf_size);
-
-    /// @brief Method to activate/deactivate statistical outlier removal.
-    ///
-    /// This method activates/deactivates statistical outlier removal of internally stored cloud data before edge point detection.
-    /// @param[in] activate Bool value to activate/deactivate statistical outlier removal.
-    /// @param[in] MeanK Number of points to use for mean distance estimation
-    /// @param[in] StddevMulThresh Standard deviation multiplier - Points with distances within threshhold of mean + StddevMulThresh * stddev are classified as inliers.
-    void SetStatOutRem(bool activate, int MeanK, float StddevMulThresh);
-
-    /// @brief Method to adjust indices in provided vector to match edge points.
-    ///
-    /// This method removes points from provided vector which are not edge points and corrects the point indices to match the indices of the downsampled and/or 
-    ///     filtered cloud.
-    /// @param[in, out] indices Point indices to be corrected.
-    void CorrectIndices(std::vector<int> &indices);
-
     /// @brief Method to set indices of first n points to be removed after edge point detection.
     ///
     /// @param[in] first_ind Vector containing indices of first n points.
@@ -98,12 +76,28 @@ public:
     /// @return Vector containing teused indices.
     std::vector<int> GetReuseInd();
 
+    /// @brief Method to activate/deactivate voxel down sampling.
+    ///
+    /// This method activates/deactivates the down sampling of the internally stored cloud data before edge point detection.
+    /// @param[in] activate Bool value to activate/deactivate down sampling.
+    /// @param[in] leaf_size Leaf size to be used for creating voxel grid.
+
+    void SetDownSample(bool activate, float leaf_size);
+
+    /// @brief Method to activate/deactivate statistical outlier removal.
+    ///
+    /// This method activates/deactivates statistical outlier removal of internally stored cloud data before edge point detection.
+    /// @param[in] activate Bool value to activate/deactivate statistical outlier removal.
+    /// @param[in] MeanK Number of points to use for mean distance estimation
+    /// @param[in] StddevMulThresh Standard deviation multiplier - Points with distances within threshhold of mean + StddevMulThresh * stddev are classified as inliers.
+    void SetStatOutRem(bool activate, int MeanK, float StddevMulThresh);
+
     /// @brief Method to set removal criteria of false edges.
     ///
     /// Due to the nature of the edge detection algorithm, certain points of an incomplete point cloud might be falsely detected as edges. This Method
     ///     removes these false edges at the beginning or the end of point cloud section.
     /// @param[in] remove_first Activates the removal of first n points provided in SetFirstInd as false edges.
-    /// @param[in] remove_last Activates the removal of last n points provided in SetLastInd as false edges. 
+    /// @param[in] remove_last Activates the removal of last n points provided in SetLastInd as false edges.
     void SetFilterCriteria(bool remove_first = false, bool remove_last = false);
 
     /// @brief Method to detect edge points in a cloud.
@@ -118,11 +112,16 @@ public:
     /// @param[in] radius Radius of sphere from point to find neighbours using radial search
     /// @param[in] radial_search Do radial search instead of KNN Search in KD-Tree.
     /// @return Point cloud containing edge points.
-    pcl::PointCloud<pcl::PointXYZ> FindEdgePoints(const int no_neighbours, const double angular_thresh_rads,
-                                                  const float dist_thresh = 0.01,
-                                                  const float radius = 0.1, const bool radial_search = false);
+    pcl::PointCloud<pcl::PointXYZ> FindEdgePoints(int no_neighbours, double angular_thresh_rads, float dist_thresh = 0.01,
+                                                  float radius = 0.1, bool radial_search = false);
 
+    /// @brief Method to adjust indices in provided vector to match edge points.
+    ///
+    /// This method removes points from provided vector which are not edge points and corrects the point indices to match the indices of the downsampled and/or
+    ///     filtered cloud.
+    /// @param[in, out] indices Point indices to be corrected.
 
+    void CorrectIndices(std::vector<int> &indices);
 
 };
 
