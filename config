@@ -1,0 +1,14 @@
+filename=../data/Blech.pcd
+leaf_size=0.0001
+MeanK1=50
+StddevMulThresh1=1.5
+NeighboursK1=200
+dist_thresh1=0.01
+angular_thresh1=90
+SetStatOutRem=1
+MeanK2=20
+StddevMulThresh2=1.50
+NeighboursK2=20
+dist_thresh2=0.01
+angular_thresh2=11
+sort=1
