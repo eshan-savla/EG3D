@@ -32,7 +32,8 @@ private:
     std::unordered_map<unsigned long, unsigned long> return_index_map;
     pcl::PointCloud<pcl::PointXYZ>::Ptr returned_cloud;
 
-    void ComputeInliers(const float &dist_thresh, std::vector<int> &neighbours, std::vector<int> &global_inliers);
+    void ComputeInliers(const float &dist_thresh, std::vector<int> &neighbours, std::vector<int> &global_inliers,
+                        Eigen::VectorXf &plane_parameters);
     static std::tuple<Eigen::Vector4f, float> EstimateNormals(pcl::PointCloud<pcl::PointXYZ>::Ptr &input_cloud,
                                                        const std::vector<int> &indices);
     static double ComputeAngularGap(const pcl::PointXYZ &origin, pcl::PointCloud<pcl::PointXYZ>::Ptr &local_cloud,

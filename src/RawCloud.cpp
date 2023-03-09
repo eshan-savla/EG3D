@@ -84,16 +84,15 @@ pcl::PointCloud<pcl::PointXYZ> RawCloud::FindEdgePoints(const int no_neighbours,
                     continue;
             }
             std::vector<int> global_inliers;
-            ComputeInliers(dist_thresh, neighbour_ids, global_inliers);
+            Eigen::VectorXf plane_params;
+            ComputeInliers(dist_thresh, neighbour_ids, global_inliers, plane_params);
             if (!InInliers(i, global_inliers) || global_inliers.size() < 3) {
                 continue;
             } else {
-                Eigen::Vector4f plane_parameters;
-                float curvature;
-                std::tie(plane_parameters, curvature) = EstimateNormals(cloud_data, global_inliers);
-                pcl::PointCloud<pcl::PointXYZ>::Ptr neighbours_cloud(new pcl::PointCloud<pcl::PointXYZ>);
-                ExtractIndices(global_inliers, neighbours_cloud);
-                double G0 = ComputeAngularGap(origin, neighbours_cloud, plane_parameters);
+                Eigen::Vector4f plane_parameters = plane_params.head<4>();
+                pcl::PointCloud<pcl::PointXYZ>::Ptr local_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+                ExtractIndices(global_inliers, local_cloud);
+                double G0 = ComputeAngularGap(origin, local_cloud, plane_parameters);
                 if (G0 >= angular_thresh_rads)
                     edge_points_thread.push_back(i);
             }
@@ -114,13 +113,16 @@ pcl::PointCloud<pcl::PointXYZ> RawCloud::FindEdgePoints(const int no_neighbours,
 
 
 void
-RawCloud::ComputeInliers(const float &dist_thresh, std::vector<int> &neighbours, std::vector<int> &global_inliers) {
+RawCloud::ComputeInliers(const float &dist_thresh, std::vector<int> &neighbours, std::vector<int> &global_inliers,
+                         Eigen::VectorXf &plane_parameters) {
 
     pcl::SampleConsensusModelPlane<pcl::PointXYZ>::Ptr model_p (new pcl::SampleConsensusModelPlane<pcl::PointXYZ> (cloud_data, neighbours));
     pcl::RandomSampleConsensus<pcl::PointXYZ> local_plane_fitter (model_p);
     local_plane_fitter.setDistanceThreshold(dist_thresh);
     local_plane_fitter.computeModel();
     local_plane_fitter.getInliers(global_inliers);
+    local_plane_fitter.getModelCoefficients(plane_parameters);
+    model_p->optimizeModelCoefficients(global_inliers, plane_parameters, plane_parameters);
 }
 
 std::tuple<Eigen::Vector4f, float> RawCloud::EstimateNormals(pcl::PointCloud<pcl::PointXYZ>::Ptr &input_cloud,
