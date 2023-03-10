@@ -64,11 +64,17 @@ protected:
 
     /// @brief Method to perform voxel down sampling.
     ///
-    /// @param cloud
-    /// @param leaf_size
-    /// @return
+    /// @param[in, out] cloud Point cloud to be filtered and returned.
+    /// @param[in] leaf_size Leaf size for voxel grid.
+    /// @return Vector contatining all removed indices.
     static std::vector<int> VoxelDownSample_(pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud, float leaf_size);
 
+    /// @brief Method to perform uniform down sampling
+    ///
+    /// This method performs a more uniform downsampling of the point cloud.
+    /// @param[in, out] cloud Point cloud to be filtered and returned.
+    /// @param[in] leaf_radius radius of leaf grid.
+    /// @return Indices of points removed by method.
     static pcl::IndicesConstPtr UniformDownSample_(pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud, double leaf_radius);
 
     /// @brief Method to mark point indices removed by outlier removal.
