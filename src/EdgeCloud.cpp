@@ -453,8 +453,8 @@ void EdgeCloud::AddPoints(const pcl::PointCloud<pcl::PointXYZ>::Ptr &new_points)
 
     if (downsample){
         pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud(new pcl::PointCloud<pcl::PointXYZ>);
-        VoxelDownSample(this->new_points, leaf_size, filtered_cloud);
-        CorrectIndicesMapped(reused_inds_end);
+        UniformDownSample(this->new_points, leaf_size, filtered_cloud);
+        CorrectIndicesRemoved(reused_inds_end);
         pcl::copyPointCloud(*filtered_cloud, *(this->new_points));
     }
     if (outrem) {

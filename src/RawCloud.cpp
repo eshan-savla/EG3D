@@ -45,10 +45,10 @@ pcl::PointCloud<pcl::PointXYZ> RawCloud::FindEdgePoints(const int no_neighbours,
                                                         const bool radial_search) {
     if (do_downsample) {
         pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud(new pcl::PointCloud<pcl::PointXYZ>);
-        VoxelDownSample(filtered_cloud, leaf_size);
-        CorrectIndicesMapped(first_ind);
-        CorrectIndicesMapped(last_ind);
-        CorrectIndicesMapped(reuse_ind);
+        UniformDownSample(filtered_cloud, leaf_size);
+        CorrectIndicesRemoved(first_ind);
+        CorrectIndicesRemoved(last_ind);
+        CorrectIndicesRemoved(reuse_ind);
         pcl::copyPointCloud(*filtered_cloud, *cloud_data);
     }
         
@@ -58,9 +58,6 @@ pcl::PointCloud<pcl::PointXYZ> RawCloud::FindEdgePoints(const int no_neighbours,
         CorrectIndicesRemoved(first_ind);
         CorrectIndicesRemoved(last_ind);
         CorrectIndicesRemoved(reuse_ind);
-        pcl::PointCloud<pcl::PointXYZ>::Ptr new_cloud (new pcl::PointCloud<pcl::PointXYZ>);
-        pcl::copyPointCloud(*cloud_data, last_ind, *new_cloud);
-        pcl::io::savePCDFileASCII("/home/eshan/TestEG3D/src/testeg3d/data/false_segment.pcd", *new_cloud);
         pcl::copyPointCloud(*filtered_cloud, *cloud_data);
     }
 

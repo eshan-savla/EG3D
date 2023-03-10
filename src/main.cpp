@@ -16,8 +16,9 @@
 // Static variables for argument parsing
 static std::string filename;
 static int MeanK1, NeighboursK1, MeanK2, NeighboursK2;
-static float leaf_size, StddevMulThresh1, dist_thresh1, angular_thresh1, StddevMulThresh2, dist_thresh2,
+static float StddevMulThresh1, dist_thresh1, angular_thresh1, StddevMulThresh2, dist_thresh2,
         angular_thresh2;
+static double leaf_radius;
 static bool SetStatOutRem, sort;
 
 /////////////////////// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX //////////////////////////////////////////////
@@ -47,7 +48,7 @@ void AssignArgs(const std::unordered_map<std::string, std::string>& args){
     NeighboursK1 = std::stoi(args.at("NeighboursK1"));
     MeanK2 = std::stoi(args.at("MeanK2"));
     NeighboursK2 = std::stoi(args.at("NeighboursK2"));
-    leaf_size = std::stof(args.at("leaf_size"));
+    leaf_radius = std::stof(args.at("leaf_radius"));
     StddevMulThresh1 = std::stof(args.at("StddevMulThresh1"));
     dist_thresh1 = std::stof(args.at("StddevMulThresh1"));
     angular_thresh1 = M_PI * std::stof(args.at("angular_thresh1")) / 180.0;
@@ -65,7 +66,7 @@ int main(int argc, const char * argv[]) {
     RawCloud raw_input;
     raw_input.ReadCloud(filename);
 //    raw_input.GenerateCloud(1000);
-    raw_input.VoxelDownSample(leaf_size);
+    raw_input.UniformDownSample(leaf_radius);
     raw_input.StatOutlierRemoval(MeanK1,StddevMulThresh1);
     std::cout << "Points after down sample: " << raw_input.GetCount() << std::endl;
     std::vector<int> edge_points;

@@ -178,9 +178,44 @@ pcl::IndicesConstPtr BaseCloud::StatOutlierRem(pcl::PointCloud<pcl::PointXYZ>::P
     sor.filter(inliers);
     pcl::PointIndices pi;
     sor.getRemovedIndices(pi);
-    pcl::PointCloud<pcl::PointXYZ> cl, cl2;
     pcl::IndicesConstPtr return_inds (new pcl::Indices(pi.indices));
     pcl::copyPointCloud(*cloud, inliers, *cloud);
+    return return_inds;
+}
+
+
+void BaseCloud::UniformDownSample(const double leaf_radius) {
+    pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::copyPointCloud(*cloud_data, *filtered_cloud);
+    cloud_size_before = cloud_data->size();
+    pcl::IndicesConstPtr removed_indices = UniformDownSample_(filtered_cloud, leaf_radius);
+    MarkPoints(removed_indices);
+    pcl::copyPointCloud(*filtered_cloud, *cloud_data);
+}
+
+void BaseCloud::UniformDownSample(pcl::PointCloud<pcl::PointXYZ>::Ptr &filtered_cloud, const double leaf_radius) {
+    pcl::copyPointCloud(*cloud_data, *filtered_cloud);
+    cloud_size_before = filtered_cloud->size();
+    pcl::IndicesConstPtr removed_indices = UniformDownSample_(filtered_cloud, leaf_radius);
+    MarkPoints(removed_indices);
+}
+
+void BaseCloud::UniformDownSample(pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud_in, const double leaf_radius,
+                                  pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud_out) {
+    pcl::copyPointCloud(*cloud_in, *cloud_out);
+    cloud_size_before = cloud_in->size();
+    pcl::IndicesConstPtr removed_indices = UniformDownSample_(cloud_out, leaf_radius);
+    MarkPoints(removed_indices);
+}
+
+pcl::IndicesConstPtr BaseCloud::UniformDownSample_(pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud, const double leaf_radius) {
+    pcl::UniformSampling<pcl::PointXYZ> uniformSampling(true);
+    uniformSampling.setInputCloud(cloud);
+    uniformSampling.setRadiusSearch(leaf_radius);
+    uniformSampling.filter(*cloud);
+    pcl::PointIndices pi;
+    uniformSampling.getRemovedIndices(pi);
+    pcl::IndicesConstPtr return_inds (new pcl::Indices(pi.indices));
     return return_inds;
 }
 
@@ -219,3 +254,4 @@ void BaseCloud::CorrectIndicesMapped(std::vector<int> &indices_vector) {
         pcl::PointCloud<pcl::PointXYZ> cl;
     }
 }
+

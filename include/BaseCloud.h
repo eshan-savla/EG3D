@@ -15,6 +15,7 @@
 #include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/filters/radius_outlier_removal.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/uniform_sampling.h>
 
 
 /// @brief Base class for cloud processors.
@@ -67,6 +68,8 @@ protected:
     /// @param leaf_size
     /// @return
     static std::vector<int> VoxelDownSample_(pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud, float leaf_size);
+
+    static pcl::IndicesConstPtr UniformDownSample_(pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud, double leaf_radius);
 
     /// @brief Method to mark point indices removed by outlier removal.
     ///
@@ -175,6 +178,12 @@ public:
     /// @param[in] leaf_size Leaf size for voxel grind in x, y and z space.
     /// @param[out] cloud_out Filtered cloud
     void VoxelDownSample(pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud_in, float leaf_size, pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud_out);
+
+    void UniformDownSample(double leaf_radius);
+
+    void UniformDownSample(pcl::PointCloud<pcl::PointXYZ>::Ptr &filtered_cloud, double leaf_radius);
+
+    void UniformDownSample(pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud_in, double leaf_radius, pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud_out);
 };
 
 
