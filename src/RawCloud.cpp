@@ -104,6 +104,7 @@ pcl::PointCloud<pcl::PointXYZ> RawCloud::FindEdgePoints(const int no_neighbours,
     pcl::copyPointCloud(*cloud_data, edge_points_global, return_cloud);
     *returned_cloud = return_cloud;
     CreateReturnIndexMap();
+    CorrectIndices(reuse_ind);
     return return_cloud;
 }
 
@@ -182,24 +183,22 @@ void RawCloud::RemoveFalseEdges(std::vector<int> &edge_point_indices) {
     }
     std::unordered_map<int, bool> keep_indices;
 
-    for(int index : edge_point_indices) 
+    for(const int edge_point : edge_point_indices)
     {
-        keep_indices[index] = true;
+        keep_indices[edge_point] = true;
     }
     if (remove_last && !last_ind.empty()) {
-        for (int index : last_ind)
+        for (int index_last : last_ind)
         {
-            if(index_lookup.find(index) != index_lookup.end())
-                keep_indices[index] = false;
+            if(index_lookup.find(index_last) != index_lookup.end())
+                keep_indices[index_last] = false;
         }
     }
-        
-
     if (remove_first && !first_ind.empty()) {
-        for (int index : first_ind)
+        for (int index_first : first_ind)
         {
-            if(index_lookup.find(index) != index_lookup.end())
-                keep_indices[index] = false;
+            if(index_lookup.find(index_first) != index_lookup.end())
+                keep_indices[index_first] = false;
         }
     }
     if (!keep_indices.empty())
@@ -210,7 +209,6 @@ void RawCloud::RemoveFalseEdges(std::vector<int> &edge_point_indices) {
             if(keep_indices.at(point_index))
                 new_edge_points.push_back(point_index);
         }
-        edge_point_indices.clear();
         edge_point_indices = new_edge_points;
     }
 
@@ -243,11 +241,6 @@ void RawCloud::SetStatOutRem(bool activate, int MeanK, float StddevMulThresh) {
 
 void RawCloud::CorrectIndices(std::vector<int> &indices) {
     std::vector<int> indices_copy = indices;
-    if (do_downsample)
-        CorrectIndicesMapped(indices_copy);
-    if(do_stat_outrem)
-        CorrectIndicesRemoved(indices_copy);
-
     if(!edge_points.empty())
     {
         std::vector<int> edge_points_copy = edge_points;
@@ -255,11 +248,6 @@ void RawCloud::CorrectIndices(std::vector<int> &indices) {
         std::sort(edge_points_copy.begin(), edge_points_copy.end());
 
         std::unordered_map<int, bool> keep_indices;
-    //    std::unordered_map<std::size_t, std::size_t> index_lookup;
-    //    for (int i = 0; i < indices_copy.size(); ++i) {
-    //        index_lookup[indices_copy.at(i)] = i;
-    //    }
-
         for (int index : indices_copy) {
             keep_indices[index] = false;
         }
@@ -273,10 +261,6 @@ void RawCloud::CorrectIndices(std::vector<int> &indices) {
             common_points.push_back(*st);
             keep_indices[*st] = true;
         }
-    //    for (int edge_point : edge_points) {
-    //        if (index_lookup.find(edge_point) != index_lookup.end())
-    //            keep_indices[edge_point] = true;
-    //    }
 
         std::vector<int> new_indices;
         for (int index : indices_copy) {

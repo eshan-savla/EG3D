@@ -1,5 +1,5 @@
 filename=../data/Blech.pcd
-leaf_size=0.0001
+leaf_radius=0.0001
 MeanK1=50
 StddevMulThresh1=1.5
 NeighboursK1=200

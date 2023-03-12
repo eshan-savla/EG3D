@@ -149,11 +149,11 @@ std::vector<int> BaseCloud::VoxelDownSample_(pcl::PointCloud<pcl::PointXYZ>::Ptr
 void BaseCloud::MarkPoints(pcl::IndicesConstPtr &removed_indices) {
     removed_indices_.clear();
     removed_indices_.resize(cloud_size_before, false);
+    int last = removed_indices->at(removed_indices->size() - 1);
 
-    for(auto index : *removed_indices) {
+    for(const auto index : *removed_indices) {
         removed_indices_.at(index) = true;
     }
-    pcl::PointCloud<pcl::PointXYZ> cl;
     point_shifts.clear();
     point_shifts.resize(cloud_size_before, 0);
     int outlier_count = 0;
@@ -161,8 +161,7 @@ void BaseCloud::MarkPoints(pcl::IndicesConstPtr &removed_indices) {
     for (int i = 0; i < cloud_size_before; ++i) {
         if (!removed_indices_.at(i)) {
             point_shifts.at(i) = sum;
-        }
-        else {
+        } else {
             outlier_count++;
             sum++;
         }
@@ -210,12 +209,21 @@ void BaseCloud::UniformDownSample(pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud_in,
 
 pcl::IndicesConstPtr BaseCloud::UniformDownSample_(pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud, const double leaf_radius) {
     pcl::UniformSampling<pcl::PointXYZ> uniformSampling(true);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr discard_cloud (new pcl::PointCloud<pcl::PointXYZ>); // Placeholder cloud
     uniformSampling.setInputCloud(cloud);
     uniformSampling.setRadiusSearch(leaf_radius);
-    uniformSampling.filter(*cloud);
+    uniformSampling.filter(*discard_cloud);
+    discard_cloud->clear();
     pcl::PointIndices pi;
     uniformSampling.getRemovedIndices(pi);
     pcl::IndicesConstPtr return_inds (new pcl::Indices(pi.indices));
+    pcl::ExtractIndices<pcl::PointXYZ> extractor;
+    extractor.setInputCloud(cloud);
+    extractor.setNegative(true);
+    extractor.setIndices(return_inds);
+    pcl::Indices inliers;
+    extractor.filter(inliers); // Inliers found by uniformSampling are extracted via this method to maintain point indexing
+    pcl::copyPointCloud(*cloud, inliers, *cloud); // filters input cloud
     return return_inds;
 }
 
