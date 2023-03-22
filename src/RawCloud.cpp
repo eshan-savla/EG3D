@@ -176,26 +176,22 @@ double RawCloud::ComputeAngularGap(const pcl::PointXYZ &origin, pcl::PointCloud<
 }
 
 void RawCloud::RemoveFalseEdges(std::vector<int> &edge_point_indices) {
+    std::unordered_map<int, bool> keep_indices;
     std::sort(edge_point_indices.begin(), edge_point_indices.end());
     std::unordered_map<std::size_t , std::size_t> index_lookup;
     for (int i = 0; i < edge_point_indices.size(); ++i) {
         index_lookup[edge_point_indices.at(i)] = i;
-    }
-    std::unordered_map<int, bool> keep_indices;
-
-    for(const int edge_point : edge_point_indices)
-    {
-        keep_indices[edge_point] = true;
+        keep_indices[edge_point_indices.at(i) = true];
     }
     if (remove_last && !last_ind.empty()) {
-        for (int index_last : last_ind)
+        for (const int &index_last : last_ind)
         {
             if(index_lookup.find(index_last) != index_lookup.end())
                 keep_indices[index_last] = false;
         }
     }
     if (remove_first && !first_ind.empty()) {
-        for (int index_first : first_ind)
+        for (const int &index_first : first_ind)
         {
             if(index_lookup.find(index_first) != index_lookup.end())
                 keep_indices[index_first] = false;
@@ -204,7 +200,7 @@ void RawCloud::RemoveFalseEdges(std::vector<int> &edge_point_indices) {
     if (!keep_indices.empty())
     {
         std::vector<int> new_edge_points;
-        for (int point_index : edge_point_indices)
+        for (const int &point_index : edge_point_indices)
         {
             if(keep_indices.at(point_index))
                 new_edge_points.push_back(point_index);
