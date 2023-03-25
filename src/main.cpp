@@ -77,7 +77,7 @@ int main(int argc, const char * argv[]) {
     *edge_cloud = raw_input.FindEdgePoints(NeighboursK1, angular_thresh1, dist_thresh1);
     EdgeCloud edges;
     double duration = stpw.getTimeSeconds();
-//    edges.SetStatOutRem(SetStatOutRem, MeanK2, StddevMulThresh2);
+    edges.SetStatOutRem(SetStatOutRem, MeanK2, StddevMulThresh2);
     edges.AddPoints(edge_cloud);
     std::cout << "Processing duration: " << duration << std::endl;
     edges.SaveCloud("../data/edge_points.pcd");
