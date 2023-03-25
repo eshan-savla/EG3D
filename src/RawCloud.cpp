@@ -181,7 +181,7 @@ void RawCloud::RemoveFalseEdges(std::vector<int> &edge_point_indices) {
     std::unordered_map<std::size_t , std::size_t> index_lookup;
     for (int i = 0; i < edge_point_indices.size(); ++i) {
         index_lookup[edge_point_indices.at(i)] = i;
-        keep_indices[edge_point_indices.at(i) = true];
+        keep_indices[edge_point_indices.at(i)] = true;
     }
     if (remove_last && !last_ind.empty()) {
         for (const int &index_last : last_ind)
