@@ -297,8 +297,9 @@ int EdgeCloud::GrowSegment(const int &initial_seed, const int &segment_id, const
     point_labels[initial_seed] = segment_id;
 
     int num_pts = 1;
+    int original_seed = initial_seed;
     if (use_original)
-        segment_seed_map.at(segment_id);
+        original_seed = segment_seed_map.at(segment_id);
     while (!seeds.empty()) {
         int current_seed;
         current_seed = seeds.front();
@@ -324,16 +325,12 @@ int EdgeCloud::GrowSegment(const int &initial_seed, const int &segment_id, const
                 continue;
             }
             bool is_seed = false;
-            Segment current_segment = segment_infos.at(segment_id);
-            Eigen::Vector3f segment_vec = current_segment.segment_dir;
-            Eigen::Vector3f nghbr_vec = vectors_map.at(index);
-            bool belongs_to_segment = CheckPoint(segment_vec, nghbr_vec, is_seed);
+            bool belongs_to_segment = CheckPoint(current_seed, index, is_seed);
             if (!belongs_to_segment) {
                 i_nghbr++;
                 continue;
             }
             point_labels[index] = segment_id;
-            current_segment.segment_dir = (current_segment.segment_dir + nghbr_vec) * 0.5f;
             num_pts++;
             if (is_seed)
                 seeds.push(index);
@@ -344,9 +341,11 @@ int EdgeCloud::GrowSegment(const int &initial_seed, const int &segment_id, const
     return num_pts;
 }
 
-bool EdgeCloud::CheckPoint(const Eigen::Vector3f &seed_vec, const Eigen::Vector3f &nghbr_vec, bool &is_a_seed) const {
+bool EdgeCloud::CheckPoint(const int &current_seed, const int &neighbour, bool &is_a_seed) {
     is_a_seed = true;
     float cos_thresh = std::cos(angle_thresh);
+    Eigen::Vector3f seed_vec = vectors_map.at(current_seed);
+    Eigen::Vector3f nghbr_vec = vectors_map.at(neighbour);
     Eigen::Vector3f zero_vec;
     zero_vec.setZero();
 //    if (nghbr_vec == zero_vec)

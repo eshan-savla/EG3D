@@ -73,7 +73,7 @@ private:
     void Init();
 
     int GrowSegment(const int &initial_seed, const int &segment_id, const int &neighbours_k, bool use_original = false);
-    bool CheckPoint(const Eigen::Vector3f &seed_vec, const Eigen::Vector3f &nghbr_vec, bool &is_a_seed) const;
+    bool CheckPoint(const int &current_seed, const int &neighbour, bool &is_a_seed);
     void ShiftIndices(std::vector<int> &indices);
     int ExtendSegments(const int neighbours_k);
     bool IsFinished(const int &label);
