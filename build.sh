@@ -1,1 +1,1 @@
-sudo cmake --build cmake-build-debug/ --target install -j 9
+sudo cmake --build cmake-build-debug/ --target install
