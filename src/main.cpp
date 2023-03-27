@@ -66,9 +66,9 @@ int main(int argc, const char * argv[]) {
     RawCloud raw_input;
     raw_input.ReadCloud(filename);
 //    raw_input.GenerateCloud(1000);
-    raw_input.UniformDownSample(leaf_radius);
-    raw_input.StatOutlierRemoval(MeanK1,StddevMulThresh1);
-    std::cout << "Points after down sample: " << raw_input.GetCount() << std::endl;
+//    raw_input.UniformDownSample(leaf_radius);
+//    raw_input.StatOutlierRemoval(MeanK1,StddevMulThresh1);
+//    std::cout << "Points after down sample: " << raw_input.GetCount() << std::endl;
     std::vector<int> edge_points;
     pcl::StopWatch stpw;
     std::cout << "Beginning edge point search" << std::endl;
