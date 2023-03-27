@@ -6,6 +6,8 @@
 #include <queue>
 #include "EdgeCloud.h"
 #include <bits/stdc++.h>
+#include <stdlib.h>
+#include <chrono>
 
 
 EdgeCloud::EdgeCloud() : new_points(new pcl::PointCloud<pcl::PointXYZ>) {
@@ -393,7 +395,8 @@ void EdgeCloud::AssembleRegions() {
             counter.at(seg_index) = pt_index + 1;
         }
     }
-    int y =0;
+    StoreClusterInfo(num_of_segs, no_of_unseg);
+    PCL_INFO("Saved cluster information");
 }
 
 void EdgeCloud::CreateColouredCloud(const std::string &path) {
@@ -625,5 +628,25 @@ void EdgeCloud::ShiftIndices(std::vector<int> &indices) {
         indices_new.at(i) = base_index + indices.at(i);
     }
     indices = indices_new;
+}
+
+void EdgeCloud::StoreClusterInfo(const unsigned long num_of_segs, const long num_of_unseg) {
+    unsigned int num_of_pts = cloud_data->size();
+    fstream fout;
+    std::string homedir = getenv("HOME");
+    std::time_t timestamp = std::time(nullptr);
+    std::string filename = homedir + "/cluster_info_" + std::asctime(std::localtime(&timestamp)) + ".csv";
+    fout.open(filename, std::ios::out | std::ios::app);
+    fout << "Num of points" << ", " << "Num of segs" << "," << "Num of unsegmented points" << ", "<< "Clusters: " << ", ";
+    for (int i = 0; i < num_of_segs; ++i) {
+        fout << std::to_string(i) << ",";
+    }
+    fout << std::endl;
+    fout << std::to_string(num_of_pts) << ", " << std::to_string(num_of_segs) << ", " << std::to_string(num_of_unseg) << ", " << " " << ", ";
+    for (const auto &cluster:clusters) {
+        fout << std::to_string(cluster.size()) << ", ";
+    }
+    fout << std::endl;
+    fout.close();
 }
 

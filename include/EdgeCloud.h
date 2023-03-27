@@ -79,6 +79,7 @@ private:
     bool IsFinished(const int &label);
     void SpecialKNeighboursSearch(const std::size_t &point_index, int neighbours_k, std::vector<int> &neighbours_id, std::vector<float> &neighbours_dist);
     static std::pair<int, int> findEntryWithLargestValue(std::unordered_map<int, int> sampleMap);
+    void StoreClusterInfo(const unsigned long num_of_segs, const long num_of_unseg);
     
 public:
     /// @brief Empty Constructor
