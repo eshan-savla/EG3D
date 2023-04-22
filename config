@@ -1,14 +1,14 @@
-filename=../data/ground_truth.pcd
+filename=../data/Blech.pcd
 leaf_radius=0.0001
 MeanK1=50
 StddevMulThresh1=1.0
-NeighboursK1=200
+NeighboursK1=500
 dist_thresh1=0.0001
 angular_thresh1=90
 SetStatOutRem=0
 MeanK2=20
 StddevMulThresh2=1.50
 NeighboursK2=30
-dist_thresh2=0.001
+dist_thresh2=0.00015
 angular_thresh2=11
 sort=1
