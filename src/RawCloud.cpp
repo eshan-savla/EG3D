@@ -120,7 +120,8 @@ RawCloud::ComputeInliers(const float &dist_thresh, std::vector<int> &neighbours,
     local_plane_fitter.computeModel();
     local_plane_fitter.getInliers(global_inliers);
     local_plane_fitter.getModelCoefficients(plane_parameters);
-    model_p->optimizeModelCoefficients(global_inliers, plane_parameters, plane_parameters);
+    if (global_inliers.size() > 3)
+        model_p->optimizeModelCoefficients(global_inliers, plane_parameters, plane_parameters);
 }
 
 std::tuple<Eigen::Vector4f, float> RawCloud::EstimateNormals(pcl::PointCloud<pcl::PointXYZ>::Ptr &input_cloud,

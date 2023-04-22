@@ -73,17 +73,25 @@ void EdgeCloud::ComputeVectors(const int &neighbours_K, const float &dist_thresh
             neighbour_ids.clear();
             squared_distances.clear();
             kdtree.nearestKSearch(cloud_data->points[point_index], neighbours_K, neighbour_ids, squared_distances);
-            std::vector<int> local_inliers, global_inliers;
+            std::vector<int> global_inliers;
             bool point_in_inliers = false;
             while (!point_in_inliers) {
-                local_inliers.clear();
                 global_inliers.clear();
-                if (neighbour_ids.size() <= 1)
-                    PCL_WARN("Neighbours size: %i \n", neighbour_ids.size());
-                
                 pcl::SampleConsensusModelLine<pcl::PointXYZ>::Ptr model_l (new pcl::SampleConsensusModelLine<pcl::PointXYZ>(cloud_data, neighbour_ids));
                 pcl::RandomSampleConsensus<pcl::PointXYZ> ransac(model_l);
                 ransac.setDistanceThreshold(dist_thresh);
+                if(neighbour_ids.size() < 3){
+                    PCL_DEBUG("Found %i neighbours", neighbour_ids.size());
+                    neighbours_map.at(point_index) = neighbour_ids;
+                    if (neighbour_ids.size() > 1) {
+                        Eigen::Vector3f direction_vector;
+                        CreateVector(cloud_data->at(neighbour_ids.at(0)), cloud_data->at(neighbour_ids.at(1)),
+                                     direction_vector);
+                        vectors_map.at(point_index) = direction_vector;
+                    }
+                    point_in_inliers = true;
+                    break;
+                }
                 ransac.computeModel();
                 ransac.getInliers(global_inliers);
                 point_in_inliers = InInliers(point_index, global_inliers);
@@ -365,7 +373,7 @@ bool EdgeCloud::CheckPoint(const int &current_seed, const int &neighbour, bool &
 
 }
 
-void EdgeCloud::AssembleRegions() {
+void EdgeCloud::AssembleRegions(const bool store_info) {
     const auto num_of_segs = num_pts_in_segment.size();
     const auto num_of_pts = cloud_data->size();
     const auto num_of_segs_check = total_num_of_segments;
@@ -619,7 +627,7 @@ std::pair<int, int> EdgeCloud::findEntryWithLargestValue(
     return entryWithMaxValue;
 }
 
-void EdgeCloud::ShiftIndices(std::vector<int> &indices) {
+void EdgeCloud::ShiftIndices(std::vector<int> &indices) const {
     // int base_index = previous_size - previous_sizes.at(previous_sizes.size() - 2);
     int base_index = previous_size;
     std::vector<int> indices_new;

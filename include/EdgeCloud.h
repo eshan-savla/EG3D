@@ -74,7 +74,7 @@ private:
 
     int GrowSegment(const int &initial_seed, const int &segment_id, const int &neighbours_k, bool use_original = false);
     bool CheckPoint(const int &current_seed, const int &neighbour, bool &is_a_seed);
-    void ShiftIndices(std::vector<int> &indices);
+    void ShiftIndices(std::vector<int> &indices) const;
     int ExtendSegments(const int neighbours_k);
     bool IsFinished(const int &label);
     void SpecialKNeighboursSearch(const std::size_t &point_index, int neighbours_k, std::vector<int> &neighbours_id, std::vector<float> &neighbours_dist);
@@ -187,7 +187,7 @@ public:
     ///
     /// This method collects all the detected regions in the internal cloud data and assembles them into segments/clusters. Each cluster contains all 
     ///     points belonging to respective segment.
-    void AssembleRegions();
+    void AssembleRegions(bool store_info = false);
 
 };
 
